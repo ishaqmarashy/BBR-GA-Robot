@@ -60,15 +60,14 @@ class Controller:
         self.right_motor.setVelocity(self.velocity_right)  
           
     def update(self):
-        isObject = self.proximity
         # stops we bot at "end state"
-        if (all(isObject[0:2]) and all(isObject[6:8])):
+        if (all(self.proximity[0:2]) and all(self.proximity[6:8])):
             self.end=True
             print('STOP')
         # check if object is in proximity
-        if isObject[0] and isObject[7] :
+        if self.proximity[0] and self.proximity[7] :
             self.close=True
-        elif not any(isObject[1:7]):
+        elif not any(self.proximity[1:7]):
             self.close=False
         # line exit
         if not self.go_around and (all(self.groundp) and not any(self.ground)):
@@ -79,38 +78,38 @@ class Controller:
         elif self.go_around and (all(self.ground)):
             print('line enter',self.ground,self.groundp)
             self.go_around=False
-        print (self.go_around)
+            self.beacon= not self.beacon
+
         # sets line to true when its detecting one
         self.line_end = any(self.ground)
         return self.line_end
         
     def follow_line(self):
-        isBlack = self.ground
-        # print(isBlackint, "end?" ,self.line_end)
+        # print(self.groundint, "end?" ,self.line_end)
         # left center right 
-        if isBlack[0] and isBlack[1] and isBlack[2]:
-            self.beacon= not self.beacon
+        if self.ground[0] and self.ground[1] and self.ground[2]:
             self.lr(1,1)
-        elif (isBlack[0] and isBlack[1] and not isBlack[2]) or\
-        (isBlack[0] and not isBlack[1] and not isBlack[2]):
-            self.lr(0.6,1)
-        elif (not isBlack[0] and isBlack[1] and  isBlack[2]) or\
-        (not isBlack[0] and not isBlack[1] and isBlack[2]):
-            self.lr(1,0.6)
-        elif not (isBlack[0] and isBlack[1] and isBlack[2]):
-            if self.beacon:
+        elif (self.ground[0] and self.ground[1] and not self.ground[2]) or\
+        (self.ground[0] and not self.ground[1] and not self.ground[2]):
+            self.lr(0.5,1)
+        elif (not self.ground[0] and self.ground[1] and  self.ground[2]) or\
+        (not self.ground[0] and not self.ground[1] and self.ground[2]):
+            self.lr(1,0.5)
+        elif not (self.ground[0] and self.ground[1] and self.ground[2]):
+            print ('turn ',self.beacon)
+            if not self.beacon:
                 self.lr(-1,1)
             else:
                 self.lr(1,-1)
 
     def avoid(self):
-        isObject = self.proximity
-        if isObject[0] or isObject[7]:
+        self.proximity = self.proximity
+        if self.proximity[0] or self.proximity[7]:
             self.lr(-1, 1)
             self.go_around=True
-        elif isObject[2] or isObject[1]:
+        elif self.proximity[2] or self.proximity[1]:
             self.lr(1,0.5)
-        elif isObject[6] or isObject [5]:
+        elif self.proximity[6] or self.proximity [5]:
             self.lr(0.5,1)
 
 
