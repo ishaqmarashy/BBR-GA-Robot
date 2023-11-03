@@ -70,13 +70,16 @@ class Controller:
             self.close=True
         elif not any(isObject[1:7]):
             self.close=False
-        # line exit and enter
-        if not self.go_around and (all(not x for x in self.groundp) and not any(self.ground)):
+        # line exit
+        if not self.go_around and (all(self.groundp) and not any(self.ground)):
             print('line exit',self.ground,self.groundp)
             self.go_around=True
-        elif self.go_around and (all(not x for x in self.ground) and not any(self.groundp)):
+
+        # line enter
+        elif self.go_around and (all(self.ground)):
             print('line enter',self.ground,self.groundp)
             self.go_around=False
+        print (self.go_around)
         # sets line to true when its detecting one
         self.line_end = any(self.ground)
         return self.line_end
@@ -103,20 +106,22 @@ class Controller:
     def avoid(self):
         isObject = self.proximity
         if isObject[0] or isObject[7]:
-            self.lr(1,-1)
+            self.lr(-1, 1)
+            self.go_around=True
         elif isObject[2] or isObject[1]:
-            self.lr(0.5,1)
-        elif isObject[6] or isObject [5]:
             self.lr(1,0.5)
+        elif isObject[6] or isObject [5]:
+            self.lr(0.5,1)
+
 
 
     def sense_compute_and_actuate(self):
         self.update()
-        self.follow_line()
         self.avoid()
+        if not self.go_around:
+            self.follow_line()
         if self.end:
             self.lr(0,0)
-        print("line end",self.line_end,'close', self.close)
 
 
     def run_robot(self):        
@@ -130,7 +135,7 @@ class Controller:
             # Read Proximity Sensors
             self.proximity = []
             for i in range(8):
-                self.proximity.append(False if self.proximity_sensors[i].getValue() < 200 else True)
+                self.proximity.append(False if self.proximity_sensors[i].getValue() < 300 else True)
             
             # Check Light Sensors
             if not self.beacon:
