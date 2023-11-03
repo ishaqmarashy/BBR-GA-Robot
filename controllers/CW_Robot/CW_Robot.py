@@ -21,16 +21,18 @@ class Controller:
         self.velocity_left = 0
         self.velocity_right = 0
         self.go_around=False
+        self.close=False
         self.beacon=False
         self.inputs = []
         self.inputsPrevious = []
-        self.flag_turn = 0
         self.ground = []
         self.proximity = []
+        self.proximity_sensors = []
+        self.flag_turn = 0
         self.line_end = False
+        self.end = False
 
         # Enable Proximity Sensors
-        self.proximity_sensors = []
         for i in range(8):
             sensor_name = 'ps' + str(i)
             self.proximity_sensors.append(self.robot.getDevice(sensor_name))
@@ -55,34 +57,67 @@ class Controller:
         self.velocity_left = l*self.max_speed
         self.velocity_right = r*self.max_speed
         self.left_motor.setVelocity(self.velocity_left)
-        self.right_motor.setVelocity(self.velocity_right)    
-    
+        self.right_motor.setVelocity(self.velocity_right)  
+          
+    def update(self):
+        isObject = self.proximity
+        # stops we bot at "end state"
+        if (all(isObject[0:2]) and all(isObject[6:8])):
+            self.end=True
+            print('STOP')
+        # check if object is in proximity
+        if isObject[0] and isObject[7] :
+            self.close=True
+        elif not any(isObject[1:7]):
+            self.close=False
+        # line exit and enter
+        if not self.go_around and (all(not x for x in self.groundp) and not any(self.ground)):
+            print('line exit',self.ground,self.groundp)
+            self.go_around=True
+        elif self.go_around and (all(not x for x in self.ground) and not any(self.groundp)):
+            print('line enter',self.ground,self.groundp)
+            self.go_around=False
+        # sets line to true when its detecting one
+        self.line_end = any(self.ground)
+        return self.line_end
+        
     def follow_line(self):
-        ground=self.ground
-        print(ground,self.line_end )
-        if not self.line_end:
-            if ground[0]>450 and ground[1]>450 and ground[2]>450:
-                self.lr(1,1)
-            elif (ground[0]>450 and ground[1]>450 and ground[2]<450) or (ground[0]>450 and ground[1]<450 and ground[2]<450):
-                self.lr(0.5,1)
-            elif (ground[0]<450 and ground[1]>450 and ground[2]>450) or (ground[0]<450 and ground[1]<450 and ground[2]<450):
-                self.lr(1,0.5)
-            else:
-                self.lr(0,0)
-                self.line_end=True
-        else:
+        isBlack = self.ground
+        # print(isBlackint, "end?" ,self.line_end)
+        # left center right 
+        if isBlack[0] and isBlack[1] and isBlack[2]:
+            self.beacon= not self.beacon
+            self.lr(1,1)
+        elif (isBlack[0] and isBlack[1] and not isBlack[2]) or\
+        (isBlack[0] and not isBlack[1] and not isBlack[2]):
+            self.lr(0.6,1)
+        elif (not isBlack[0] and isBlack[1] and  isBlack[2]) or\
+        (not isBlack[0] and not isBlack[1] and isBlack[2]):
+            self.lr(1,0.6)
+        elif not (isBlack[0] and isBlack[1] and isBlack[2]):
             if self.beacon:
                 self.lr(-1,1)
             else:
                 self.lr(1,-1)
-            if ground[0]<350 and ground[1]<350 and ground[2]<350:
-                self.line_end=False
-                self.lr(0,0)
 
+    def avoid(self):
+        isObject = self.proximity
+        if isObject[0] or isObject[7]:
+            self.lr(1,-1)
+        elif isObject[2] or isObject[1]:
+            self.lr(0.5,1)
+        elif isObject[6] or isObject [5]:
+            self.lr(1,0.5)
 
 
     def sense_compute_and_actuate(self):
+        self.update()
         self.follow_line()
+        self.avoid()
+        if self.end:
+            self.lr(0,0)
+        print("line end",self.line_end,'close', self.close)
+
 
     def run_robot(self):        
         # Main Loop
@@ -90,23 +125,12 @@ class Controller:
             # History
             self.groundp=self.ground
             self.proximityp=self.proximity
-            self.ground = []
-            self.proximity = []
             # Read Ground Sensors
-            self.ground.append(self.right_ir.getValue())
-            self.ground.append(self.center_ir.getValue())
-            self.ground.append(self.left_ir.getValue())
-
+            self.ground = [False if x > 450 else True for x in [self.left_ir.getValue(),self.center_ir.getValue(),self.right_ir.getValue()]]
             # Read Proximity Sensors
+            self.proximity = []
             for i in range(8):
-                    temp = self.proximity_sensors[i].getValue()
-                    # Adjust Values
-                    min_ds = 0
-                    max_ds = 2400
-                    if(temp > max_ds): temp = max_ds
-                    if(temp < min_ds): temp = min_ds
-                    # Save Data
-                    self.proximity.append((temp-min_ds)/(max_ds-min_ds))
+                self.proximity.append(False if self.proximity_sensors[i].getValue() < 200 else True)
             
             # Check Light Sensors
             if not self.beacon:
