@@ -2,7 +2,6 @@ from controller import Robot
 from datetime import datetime
 import math
 import numpy as np
-MSPEED=10
 
 class Controller:
     def __init__(self, robot):        
@@ -71,12 +70,9 @@ class Controller:
             self.close=False
         # line exit
         if not self.go_around and (all(self.groundp) and not any(self.ground)):
-            print('line exit',self.ground,self.groundp)
             self.go_around=True
-
         # line enter
         elif self.go_around and (all(self.ground)):
-            print('line enter',self.ground,self.groundp)
             self.go_around=False
             self.beacon= not self.beacon
 
@@ -96,10 +92,11 @@ class Controller:
         (not self.ground[0] and not self.ground[1] and self.ground[2]):
             self.lr(1,0.5)
         elif not (self.ground[0] and self.ground[1] and self.ground[2]):
-            print ('turn ',self.beacon)
             if not self.beacon:
+                print ('left')
                 self.lr(-1,1)
             else:
+                print('right')
                 self.lr(1,-1)
 
     def avoid(self):
@@ -108,11 +105,9 @@ class Controller:
             self.lr(-1, 1)
             self.go_around=True
         elif self.proximity[2] or self.proximity[1]:
-            self.lr(1,0.5)
+            self.lr(1,0.8)
         elif self.proximity[6] or self.proximity [5]:
-            self.lr(0.5,1)
-
-
+            self.lr(0.8,1)
 
     def sense_compute_and_actuate(self):
         self.update()
@@ -121,7 +116,6 @@ class Controller:
             self.follow_line()
         if self.end:
             self.lr(0,0)
-
 
     def run_robot(self):        
         # Main Loop
