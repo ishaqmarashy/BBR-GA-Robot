@@ -69,12 +69,11 @@ class Controller:
         elif not any(self.proximity[1:7]):
             self.close=False
         # line exit
-        if not self.go_around and (all(self.groundp) and not any(self.ground)):
+        if not self.go_around and (all(self.groundp) and not any(self.ground)) and self.close:
             self.go_around=True
         # line enter
         elif self.go_around and (all(self.ground)):
             self.go_around=False
-            self.beacon= not self.beacon
 
         # sets line to true when its detecting one
         self.line_end = any(self.ground)
@@ -83,31 +82,49 @@ class Controller:
     def follow_line(self):
         # print(self.groundint, "end?" ,self.line_end)
         # left center right 
-        if self.ground[0] and self.ground[1] and self.ground[2]:
-            self.lr(1,1)
-        elif (self.ground[0] and self.ground[1] and not self.ground[2]) or\
-        (self.ground[0] and not self.ground[1] and not self.ground[2]):
-            self.lr(0.5,1)
-        elif (not self.ground[0] and self.ground[1] and  self.ground[2]) or\
-        (not self.ground[0] and not self.ground[1] and self.ground[2]):
-            self.lr(1,0.5)
-        elif not (self.ground[0] and self.ground[1] and self.ground[2]):
-            if not self.beacon:
-                print ('left')
-                self.lr(-1,1)
+        if self.beacon:
+            if self.ground[0] and self.ground[1] and self.ground[2]:
+                self.lr(0.3,-0.3)
+            elif self.ground[0] and self.ground[1] and not self.ground[2]:
+                self.lr(0.8,0.8)
+            elif  (not self.ground[0] and not self.ground[1]) and self.ground[2]:
+                self.lr(0.8,0.6)
+            elif self.ground[0] and not (self.ground[1] and self.ground[2]):
+                self.lr(0.6,0.8)
             else:
-                print('right')
-                self.lr(1,-1)
+                self.lr(0.2,0.4)
+        else:
+            if self.ground[0] and self.ground[1] and self.ground[2]:
+                self.lr(-0.3,0.3)
+            elif not self.ground[0] and self.ground[1] and self.ground[2]:
+                self.lr(0.8,0.8)
+            elif  (not self.ground[0] and not self.ground[1]) and self.ground[2]:
+                self.lr(0.8,0.6)
+            elif self.ground[0] and not (self.ground[1] and self.ground[2]):
+                self.lr(0.8,0.6)
+            else:
+                self.lr(0.4,0.2)
+            pass
 
     def avoid(self):
         self.proximity = self.proximity
-        if self.proximity[0] or self.proximity[7]:
-            self.lr(-1, 1)
-            self.go_around=True
-        elif self.proximity[2] or self.proximity[1]:
-            self.lr(1,0.8)
-        elif self.proximity[6] or self.proximity [5]:
-            self.lr(0.8,1)
+        if self.beacon:
+            if any(self.proximity[0:2]) or any(self.proximity[6:8]):
+                self.lr(0.5, -0.5)
+                self.go_around=True
+            elif self.proximity[5]:
+                self.lr(0.3,1)
+            elif self.proximity[2] :
+                self.lr(1,0.3)
+        else:
+            if any(self.proximity[0:2]) or any(self.proximity[6:8]):
+                self.lr(-0.5, 0.5)
+                self.go_around=True
+            elif self.proximity[2] :
+                self.lr(1,0.3)
+            elif self.proximity[5]:
+                self.lr(0.3,1)
+            pass
 
     def sense_compute_and_actuate(self):
         self.update()
@@ -124,7 +141,10 @@ class Controller:
             self.groundp=self.ground
             self.proximityp=self.proximity
             # Read Ground Sensors
-            self.ground = [False if x > 450 else True for x in [self.left_ir.getValue(),self.center_ir.getValue(),self.right_ir.getValue()]]
+            self.ground = [False if x > 450 else True for x in 
+                           [self.left_ir.getValue(),
+                            self.center_ir.getValue(),
+                            self.right_ir.getValue()]]
             # Read Proximity Sensors
             self.proximity = []
             for i in range(8):
@@ -139,8 +159,9 @@ class Controller:
                         max_ds = 2400
                         if(temp > max_ds): temp = max_ds
                         if(temp < min_ds): temp = min_ds
-                        if temp<40:
+                        if temp<2400:
                             self.beacon=True
+                        print(temp)
             self.sense_compute_and_actuate()
       
                 
