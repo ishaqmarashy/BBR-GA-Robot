@@ -80,26 +80,30 @@ class Controller:
     def follow_line(self):
         # print(self.groundint, "end?" ,self.line_end)
         # left center right 
-        if self.ground[0] and self.ground[1] and self.ground[2]:
-            self.lr(0.7,0.7)
-        elif self.ground[0] and self.ground[1] and not self.ground[2]:
-            self.lr(0.4,0.7)        
-        elif self.ground[0] and not self.ground[1] and not self.ground[2]:
-            self.lr(0.4,0.7)
-        elif not self.ground[0] and self.ground[1] and self.ground[2]:
-            self.lr(0.7,0.4)
-        elif not self.ground[0] and not self.ground[1] and self.ground[2]:
-            self.lr(0.7,0.4)
-        elif self.ground[0] and not self.ground[1] and self.ground[2]:
-            self.lr(0.7,0.7)
-        elif self.beacon and not self.ground[0] and not self.ground[1] and not self.ground[2]:
-            self.lr(0.5,0.1)
-            pass
-        elif not self.ground[0] and not self.ground[1] and not self.ground[2]:
-            self.lr(0.1,0.5)
-            pass
-        else:
-            self.lr(0.5,0.1)
+        if not self.go_around:
+            if self.ground[0] and self.ground[1] and self.ground[2]:
+                self.lr(0.7,0.7)
+            elif self.ground[0] and self.ground[1] and not self.ground[2]:
+                self.lr(0.2,0.7)        
+            elif self.ground[0] and not self.ground[1] and not self.ground[2]:
+                self.lr(0.2,0.7)
+            elif not self.ground[0] and self.ground[1] and self.ground[2]:
+                self.lr(0.7,0.2)
+            elif not self.ground[0] and not self.ground[1] and self.ground[2]:
+                self.lr(0.7,0.2)
+            elif self.ground[0] and not self.ground[1] and self.ground[2]:
+                self.lr(0.4,0.4)
+            elif self.beacon and not self.ground[0] and not self.ground[1] and not self.ground[2]:
+                self.lr(0.5,0.1)
+                pass
+            elif not self.ground[0] and not self.ground[1] and not self.ground[2]:
+                self.lr(0.1,0.5)
+                pass
+            elif self.beacon:
+                self.lr(0.1,0.5)
+            else:
+                self.lr(0.5,0.1)
+
 
     def avoid(self):
         self.proximity = self.proximity
@@ -118,9 +122,9 @@ class Controller:
                 self.lr(-0.4, 0.8)
                 self.go_around=True
             elif self.proximity[2]:
-                self.lr(0.7,0.5)
+                self.lr(0.7,0.3)
             elif self.proximity[5]:
-                self.lr(0.5,0.7)
+                self.lr(0.3,0.7)
             else:
                 self.lr(0.5,0.1)
 
@@ -128,8 +132,7 @@ class Controller:
         self.lr(0,0)
         self.update()
         self.avoid()
-        if not self.go_around:
-            self.follow_line()
+        self.follow_line()
         if self.end:
             self.lr(0,0)
 
@@ -147,7 +150,7 @@ class Controller:
             # Read Proximity Sensors
             self.proximity = []
             for i in range(8):
-                self.proximity.append(False if self.proximity_sensors[i].getValue() < 100 else True)
+                self.proximity.append(False if self.proximity_sensors[i].getValue() < 300 else True)
             
             # Check Light Sensors
             if not self.beacon:
