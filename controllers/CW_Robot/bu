@@ -8,7 +8,7 @@ class Controller:
         # Robot Parameters
         self.robot = robot
         self.time_step = 1 # ms
-        self.max_speed = 6.28  # m/s
+        self.max_speed = 3.14  # m/s
  
         # Enable Motors
         self.left_motor = self.robot.getDevice('left wheel motor')
@@ -60,9 +60,8 @@ class Controller:
           
     def update(self):
         # stops we bot at "end state"
-        if (all(self.proximity[0:2]) and all(self.proximity[6:8])):
+        if sum(self.proximity)>2:
             self.end=True
-            print('STOP')
         # check if object is in proximity
         if self.proximity[0] and self.proximity[7] :
             self.close=True
@@ -74,7 +73,6 @@ class Controller:
         # line enter
         elif self.go_around and (all(self.ground)):
             self.go_around=False
-
         # sets line to true when its detecting one
         self.line_end = any(self.ground)
         return self.line_end
@@ -82,51 +80,52 @@ class Controller:
     def follow_line(self):
         # print(self.groundint, "end?" ,self.line_end)
         # left center right 
-        if self.beacon:
-            if self.ground[0] and self.ground[1] and self.ground[2]:
-                self.lr(0.3,-0.3)
-            elif self.ground[0] and self.ground[1] and not self.ground[2]:
-                self.lr(0.8,0.8)
-            elif  (not self.ground[0] and not self.ground[1]) and self.ground[2]:
-                self.lr(0.8,0.6)
-            elif self.ground[0] and not (self.ground[1] and self.ground[2]):
-                self.lr(0.6,0.8)
-            else:
-                self.lr(0.2,0.4)
-        else:
-            if self.ground[0] and self.ground[1] and self.ground[2]:
-                self.lr(-0.3,0.3)
-            elif not self.ground[0] and self.ground[1] and self.ground[2]:
-                self.lr(0.8,0.8)
-            elif  (not self.ground[0] and not self.ground[1]) and self.ground[2]:
-                self.lr(0.8,0.6)
-            elif self.ground[0] and not (self.ground[1] and self.ground[2]):
-                self.lr(0.8,0.6)
-            else:
-                self.lr(0.4,0.2)
+        if self.ground[0] and self.ground[1] and self.ground[2]:
+            self.lr(0.7,0.7)
+        elif self.ground[0] and self.ground[1] and not self.ground[2]:
+            self.lr(0.4,0.7)        
+        elif self.ground[0] and not self.ground[1] and not self.ground[2]:
+            self.lr(0.4,0.7)
+        elif not self.ground[0] and self.ground[1] and self.ground[2]:
+            self.lr(0.7,0.4)
+        elif not self.ground[0] and not self.ground[1] and self.ground[2]:
+            self.lr(0.7,0.4)
+        elif self.ground[0] and not self.ground[1] and self.ground[2]:
+            self.lr(0.7,0.7)
+        elif self.beacon and not self.ground[0] and not self.ground[1] and not self.ground[2]:
+            self.lr(0.5,0.1)
             pass
+        elif not self.ground[0] and not self.ground[1] and not self.ground[2]:
+            self.lr(0.1,0.5)
+            pass
+        else:
+            self.lr(0.5,0.1)
 
     def avoid(self):
         self.proximity = self.proximity
         if self.beacon:
             if any(self.proximity[0:2]) or any(self.proximity[6:8]):
-                self.lr(0.5, -0.5)
+                self.lr(0.8,-0.4)
                 self.go_around=True
+            elif self.proximity[2]:
+                self.lr(0.7,0.3)
             elif self.proximity[5]:
-                self.lr(0.3,1)
-            elif self.proximity[2] :
-                self.lr(1,0.3)
+                self.lr(0.3,0.7)
+            else:
+                self.lr(0.1,0.5)
         else:
             if any(self.proximity[0:2]) or any(self.proximity[6:8]):
-                self.lr(-0.5, 0.5)
+                self.lr(-0.4, 0.8)
                 self.go_around=True
-            elif self.proximity[2] :
-                self.lr(1,0.3)
+            elif self.proximity[2]:
+                self.lr(0.7,0.5)
             elif self.proximity[5]:
-                self.lr(0.3,1)
-            pass
+                self.lr(0.5,0.7)
+            else:
+                self.lr(0.5,0.1)
 
     def sense_compute_and_actuate(self):
+        self.lr(0,0)
         self.update()
         self.avoid()
         if not self.go_around:
@@ -141,14 +140,14 @@ class Controller:
             self.groundp=self.ground
             self.proximityp=self.proximity
             # Read Ground Sensors
-            self.ground = [False if x > 450 else True for x in 
+            self.ground = [False if x > 310 else True for x in 
                            [self.left_ir.getValue(),
                             self.center_ir.getValue(),
                             self.right_ir.getValue()]]
             # Read Proximity Sensors
             self.proximity = []
             for i in range(8):
-                self.proximity.append(False if self.proximity_sensors[i].getValue() < 300 else True)
+                self.proximity.append(False if self.proximity_sensors[i].getValue() < 100 else True)
             
             # Check Light Sensors
             if not self.beacon:
@@ -161,7 +160,6 @@ class Controller:
                         if(temp < min_ds): temp = min_ds
                         if temp<2400:
                             self.beacon=True
-                        print(temp)
             self.sense_compute_and_actuate()
       
                 

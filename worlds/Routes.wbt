@@ -10,8 +10,8 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.581920786111105 0.57541070747176 0.5746918447469758 2.1080850473553214
-  position -0.0964020022182811 0.14020108223864325 2.652027579676828
+  orientation -0.5714895698802404 0.5714896191010924 0.5888966690156994 2.077166964329482
+  position -0.11249127756418792 -0.07275091845924314 4.243679212649823
 }
 RectangleArena {
   translation -0.0309432 0.161318 0
@@ -20,7 +20,7 @@ RectangleArena {
   floorAppearance PBRAppearance {
     baseColorMap ImageTexture {
       url [
-        "../floor_line_path.jpeg"
+        "../CW_2023/floor_line_path.jpeg"
       ]
       repeatS FALSE
       repeatT FALSE
@@ -33,15 +33,15 @@ RectangleArena {
   wallHeight 0.05
 }
 WoodenBox {
-  translation 0.35 0.26 0.049607599088924335
-  rotation -0.5791269337838855 -0.5791269337838919 0.5737804363448991 8.83382795555118e-17
+  translation 0.35 0.26 0.049606668243320266
+  rotation -0.9669103051801717 -0.1758018736691271 0.18487337004233884 9.700138742740602e-17
   name "wooden box 1"
   size 0.1 0.1 0.1
   mass 1
 }
 WoodenBox {
-  translation -0.21 0.69 0.04960759908892433
-  rotation -9.084669865265063e-12 -1.4535395898460168e-11 1 4.6928204141029e-06
+  translation -0.21 0.69 0.04960666824332026
+  rotation 1.8169399416266259e-12 5.45077719231547e-12 1 4.69282041406526e-06
   name "wooden box 2"
   size 0.1 0.1 0.1
   mass 1
@@ -50,13 +50,13 @@ TexturedBackground {
   texture "empty_office"
 }
 E-puck {
-  hidden position_0_0 3.2113116348450785
-  hidden position_0_1 3.2058878914314612
-  hidden rotation_1 0 1 0 3.2113116348450785
-  hidden rotation_2 0 1 0 3.2058878914314612
-  translation -0.6859869999866061 -0.6600000002187468 -6.396228385963619e-05
-  rotation 8.091293894182756e-05 -7.611332031637409e-05 0.9999999938299294 1.6319407848885665
-  controller "CW_Robot"
+  hidden position_0_0 3.2113116658008924
+  hidden position_0_1 3.2058879223872747
+  hidden rotation_1 0 1 0 3.2113116658008924
+  hidden rotation_2 0 1 0 3.2058879223872747
+  translation -0.685987 -0.66 -6.3949e-05
+  rotation 0.0005852163828441811 -0.0005506349294570428 0.9999996771614277 1.631941101052429
+  controller "<none>"
   groundSensorsSlot [
     E-puckGroundSensors {
     }
