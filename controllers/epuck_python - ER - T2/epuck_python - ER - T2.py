@@ -9,13 +9,10 @@ class Controller:
         # Please, do not change these parameters
         self.robot = robot
         self.time_step = 32 # ms
-        self.max_speed = 1  # m/s
+        self.max_speed = 6.28  # m/s
  
         # MLP Parameters and Variables 
           
-        ###########
-        ### DEFINE below the architecture of your MLP network:
-         
         ### Add the number of neurons for input layer, hidden layer and output layer.
         ### The number of neurons should be in between of 1 to 20.
         ### Number of hidden layers should be one or two.
@@ -23,7 +20,7 @@ class Controller:
         self.number_input_layer = 11
         # Example with one hidden layers: self.number_hidden_layer = [5]
         # Example with two hidden layers: self.number_hidden_layer = [7,5]
-        self.number_hidden_layer = [42,1]
+        self.number_hidden_layer = [41,9]
         self.number_output_layer = 2
         
         # Create a list with the number of neurons per layer
@@ -61,7 +58,7 @@ class Controller:
             sensor_name = 'ps' + str(i)
             self.proximity_sensors.append(self.robot.getDevice(sensor_name))
             self.proximity_sensors[i].enable(self.time_step)
-       
+        
         # Enable Ground Sensors
         self.left_ir = self.robot.getDevice('gs0')
         self.left_ir.enable(self.time_step)
@@ -117,10 +114,10 @@ class Controller:
         
     def clip_value(self,value,min_max):
         if (value > min_max):
-            return min_max;
+            return min_max
         elif (value < -min_max):
-            return -min_max;
-        return value;
+            return -min_max
+        return value
 
     def sense_compute_and_actuate(self):
         # MLP: 
@@ -131,73 +128,80 @@ class Controller:
         self.velocity_right = output[1]
         
         # Multiply the motor values by 3 to increase the velocities
-        self.left_motor.setVelocity(self.velocity_left*3)
-        self.right_motor.setVelocity(self.velocity_right*3)
+        self.left_motor.setVelocity(self.velocity_left*self.max_speed)
+        self.right_motor.setVelocity(self.velocity_right*self.max_speed)
 
     def calculate_fitness(self):
-        
-        ###########
         ### DEFINE the fitness function to increase the speed of the robot and 
-        ### to encourage the robot to move forward
-        forwardFitness = (self.velocity_right+self.velocity_left)/2
-                      
-        ###########
+        ### to encourage the robot to move forwardAVOID_TRANS_RIGHT
+                    
+        forwardFitness = (self.velocity_right+self.velocity_left)/(2*self.max_speed)
         ### DEFINE the fitness function equation to avoid collision
-        avoidCollisionFitness = 1-(sum(self.inputs[3:])/len(self.inputs[3:]))
+        avoidCollisionFitness = 1-abs(sum(self.inputs[3:12])/len(self.inputs[3:12]))*5
         
-        ###########
         ### DEFINE the fitness function equation to avoid spining behaviour
-        spinningFitness = 1-math.sqrt(abs(self.velocity_right-self.velocity_left))
+        spinningFitness = 1-abs(self.velocity_right-self.velocity_left)
+
+        ### DEFINE the fitness function equation to promote line following 
+        lineFitness = (1-abs(sum(self.inputs[0:3])/len(self.inputs[0:3])))*2
         
-        ###########
         ### DEFINE the fitness function equation of this iteration which should be a combination of the previous functions         
-        combinedFitness = forwardFitness*avoidCollisionFitness*spinningFitness
-        
+        combinedFitness = (avoidCollisionFitness)+spinningFitness+(lineFitness)+forwardFitness
+        # print(round(lineFitness, 2), round(avoidCollisionFitness, 2), round(forwardFitness, 2), round(spinningFitness, 2))
         self.fitness_values.append(combinedFitness)
         self.fitness = np.mean(self.fitness_values) 
 
+
+    def calculate_fitness(self):
+        # Fitness function to encourage forward movement
+        forwardFitness = (self.velocity_right + self.velocity_left) / (2 * self.max_speed)
+
+        # Fitness function to avoid collisions
+        collisionFactor = 2  # Increase the weight for obstacle avoidance
+        avoidCollisionFitness = 1 - abs(sum(self.inputs[3:12]) / len(self.inputs[3:12])) * collisionFactor
+
+        # Fitness function to discourage spinning behavior
+        spinningFactor = 0.5  # Reduce the weight for spinning behavior
+        spinningFitness = 1 - abs(self.velocity_right - self.velocity_left) * spinningFactor
+
+        # Fitness function to promote line following
+        lineFitnessFactor = 3  # Increase the weight for line following
+        lineFitness = (1 - abs(sum(self.inputs[0:3]) / len(self.inputs[0:3])))*lineFitnessFactor
+
+        # Combine fitness components
+        combinedFitness = avoidCollisionFitness + spinningFitness + lineFitness + forwardFitness
+
+        self.fitness_values.append(combinedFitness)
+        self.fitness = np.mean(self.fitness_values)
+
     def handle_emitter(self):
-        # Send the self.fitness value to the supervisor
         data = str(self.number_weights)
         data = "weights: " + data
         string_message = str(data)
         string_message = string_message.encode("utf-8")
-        #print("Robot send:", string_message)
         self.emitter.send(string_message)
-
-        # Send the self.fitness value to the supervisor
         data = str(self.fitness)
         data = "fitness: " + data
         string_message = str(data)
         string_message = string_message.encode("utf-8")
-        #print("Robot send fitness:", string_message)
         self.emitter.send(string_message)
             
     def handle_receiver(self):
         if self.receiver.getQueueLength() > 0:
             while(self.receiver.getQueueLength() > 0):
                 # Adjust the Data to our model
-                #Webots 2022:
-                #self.receivedData = self.receiver.getData().decode("utf-8")
-                #Webots 2023:
                 self.receivedData = self.receiver.getString()
                 self.receivedData = self.receivedData[1:-1]
                 self.receivedData = self.receivedData.split()
                 x = np.array(self.receivedData)
                 self.receivedData = x.astype(float)
-                #print("Controller handle receiver data:", self.receivedData)
                 self.receiver.nextPacket()
-                
-            # Is it a new Genotype?
             if(np.array_equal(self.receivedDataPrevious,self.receivedData) == False):
                 self.flagMessage = True
-                
             else:
                 self.flagMessage = False
-                
             self.receivedDataPrevious = self.receivedData 
         else:
-            #print("Controller receiver q is empty")
             self.flagMessage = False
 
     def run_robot(self):        
@@ -215,42 +219,28 @@ class Controller:
             left = self.left_ir.getValue()
             center = self.center_ir.getValue()
             right = self.right_ir.getValue()
-            #print("Ground Sensors \n    left {} center {} right {}".format(left,center,right))
-                        
-            ### Please adjust the ground sensors values to facilitate learning 
             min_gs = 0
             max_gs = 1023
-            
             if(left > max_gs): left = max_gs
             if(center > max_gs): center = max_gs
             if(right > max_gs): right = max_gs
             if(left < min_gs): left = min_gs
             if(center < min_gs): center = min_gs
             if(right < min_gs): right = min_gs
-            
-            # Normalize the values between 0 and 1 and save data
-            self.inputs.append((left-min_gs)/(max_gs-min_gs))
-            self.inputs.append((center-min_gs)/(max_gs-min_gs))
-            self.inputs.append((right-min_gs)/(max_gs-min_gs))
-            #print("Ground Sensors \n    left {} center {} right {}".format(self.inputs[0],self.inputs[1],self.inputs[2]))
+            self.inputs.append((left)/(max_gs))
+            self.inputs.append((center)/(max_gs))
+            self.inputs.append((right)/(max_gs))
+
             
             # Read Distance Sensors
             for i in range(8):
-                ### Select the distance sensors that you will use
-                if(i==0 or i==1 or i==2 or i==3 or i==4 or i==5 or i==6 or i==7):        
-                    temp = self.proximity_sensors[i].getValue()
-                    
-                    ### Please adjust the distance sensors values to facilitate learning 
-                    min_ds = 0
-                    max_ds = 4095
-                    
-                    if(temp > max_ds): temp = max_ds
-                    if(temp < min_ds): temp = min_ds
-                    
-                    # Normalize the values between 0 and 1 and save data
-                    self.inputs.append((temp-min_ds)/(max_ds-min_ds))
-                    #print("Distance Sensors - Index: {}  Value: {}".format(i,self.proximity_sensors[i].getValue()))
-    
+                temp = self.proximity_sensors[i].getValue()
+                min_ds = 0
+                max_ds = 4300
+                if(temp > max_ds): temp = max_ds
+                if(temp < min_ds): temp = min_ds
+                self.inputs.append((temp)/(max_ds))
+
             # GA Iteration       
             # Verify if there is a new genotype to be used that was sent from Supervisor  
             self.check_for_new_genes()
@@ -258,7 +248,6 @@ class Controller:
             self.sense_compute_and_actuate()
             # Calculate the fitnes value of the current iteration
             self.calculate_fitness()
-            
             # End of the iteration 
             
 if __name__ == "__main__":

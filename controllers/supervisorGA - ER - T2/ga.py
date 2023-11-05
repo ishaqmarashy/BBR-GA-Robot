@@ -3,7 +3,7 @@ import numpy,random
 def population_reproduce(genotypes,elite):
     ###########
     ### DEFINE  crossover rate (integer number between 0 and 100):
-    cp = 50
+    cp = 70
     
     genotypes_not_ranked = genotypes
     # Rank: lowest to highest fitness
@@ -39,10 +39,10 @@ def getBestGenotype(genotypes):
     return rankPopulation(genotypes)[-1]
     
 def getAverageGenotype(genotypes):
-    sum = 0.0;
+    sum = 0.0
     for g in range(0,len(genotypes)-1):
-        sum = sum + genotypes[g][1];
-    return sum / len(genotypes);
+        sum = sum + genotypes[g][1]
+    return sum / len(genotypes)
     
 def selectParent(genotypes):
     # Tournament Selection  
@@ -74,7 +74,7 @@ def mutation(child):
     after_mutation = []
     ###########
     ### DEFINE  mutation percentage (integer number between 0 and 100):
-    mp = 50
+    mp = 20
     
     for gene in range(len(child)):
         if(random.randint(1,100) < mp):
