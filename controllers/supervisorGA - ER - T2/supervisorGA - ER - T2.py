@@ -115,7 +115,7 @@ class SupervisorGA:
             FINAL_ROT=np.array([0.0,0.0,1,1.6])
             robot_trans=np.array(self.trans_field.getSFVec3f())
             robot_rot=np.array(self.rot_field.getSFVec3f())  
-            delta_trans = 2/(abs(sum(robot_trans-FINAL_TRANS)))
+            delta_trans = 4/(abs(sum(robot_trans-FINAL_TRANS)))
             delta_rot = (abs(sum(robot_rot-FINAL_ROT)))*0.05
             robot_trans_avoid = -abs(sum(robot_trans - AVOID_TRANS)) * 0.008 
 
