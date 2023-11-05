@@ -10,7 +10,7 @@ class SupervisorGA:
         # Simulation Parameters
         # Please, do not change these parameters
         self.time_step = 32 # ms
-        self.time_experiment = 90 # s
+        self.time_experiment = 75 # s
         
         # Initiate Supervisor Module
         self.supervisor = Supervisor()
@@ -36,9 +36,9 @@ class SupervisorGA:
         
         ###########
         ### DEFINE here the 3 GA Parameters:
-        self.num_generations = 100
-        self.num_population = 20
-        self.num_elite = 2
+        self.num_generations = 30
+        self.num_population = 2
+        self.num_elite = 1
         
         # size of the genotype variable
         self.num_weights = 0
@@ -90,7 +90,7 @@ class SupervisorGA:
             string_message = str(self.emitterData)
             string_message = string_message.encode("utf-8")
             self.emitter.send(string_message)     
-        
+    
     def run_seconds(self,seconds):
         stop = int((seconds*1000)/self.time_step)
         iterations = 0
@@ -115,16 +115,12 @@ class SupervisorGA:
             FINAL_ROT=np.array([0.0,0.0,1,1.6])
             robot_trans=np.array(self.trans_field.getSFVec3f())
             robot_rot=np.array(self.rot_field.getSFVec3f())  
+            delta_trans = 2/(abs(sum(robot_trans-FINAL_TRANS)))
+            delta_rot = (abs(sum(robot_rot-FINAL_ROT)))*0.05
+            robot_trans_avoid = -abs(sum(robot_trans - AVOID_TRANS)) * 0.008 
 
-            delta_trans = 1/abs(sum(robot_trans-FINAL_TRANS))
-            delta_rot = 1/abs(sum(robot_rot-FINAL_ROT))
-            robot_trans_avoid = sum(robot_trans+AVOID_TRANS)*-0.01
-
+            print(round(delta_trans,2),round(robot_trans_avoid,2),round(delta_rot,2))
             reward=delta_trans+delta_rot+robot_trans_avoid
-            if reward > 10:
-                reward=10
-            elif reward < -10:
-                reward=-10
             return reward
 
     def evaluate_genotype(self,genotype,generation):
@@ -137,25 +133,23 @@ class SupervisorGA:
         AVOID_TRANS_RIGHT=np.array([0.35,0.26,0.05])
         while currentInteraction < numberofInteractionLoops:
             #######################################
-            # TRIAL: TURN RIGHT
+            # TRIAL: TURN ?
             #######################################
             # Send genotype to robot for evaluation
             # Reset robot position and physics
-
             self.reset_env(genotype,False)
             # Evaluation genotype 
             # Measure fitness
             self.run_seconds(self.time_experiment)
             fitness = self.receivedFitness
-            
             # Reward
-            fitness+=self.calc_reward(AVOID_TRANS_LEFT)
+            fitness+= self.calc_reward(AVOID_TRANS_LEFT)
             print("Fitness: {}".format(fitness))     
             # Add fitness value to the vector
             fitnessPerTrial.append(fitness)
             
             #######################################
-            # TRIAL: TURN LEFT
+            # TRIAL: TURN !?
             #######################################
             # Send genotype to robot for evaluation
             # Reset robot position and physics
@@ -170,7 +164,6 @@ class SupervisorGA:
 
             # Add fitness value to the vector
             fitnessPerTrial.append(fitness)
-            # End 
             currentInteraction += 1
         fitness = np.mean(fitnessPerTrial)
         current = (generation,genotype,fitness)
@@ -193,7 +186,6 @@ class SupervisorGA:
                 genotype = self.population[population]
                 # Evaluate
                 fitness = self.evaluate_genotype(genotype,generation)
-                #print(fitness)
                 # Save its fitness value
                 current_population.append((genotype,float(fitness)))
             # After checking the fitness value of all indivuals
