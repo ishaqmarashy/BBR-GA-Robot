@@ -121,10 +121,10 @@ class Controller:
         forwardFitness = ((abs(self.velocity_right) + abs(self.velocity_left)) / (2 * self.max_speed))*4.1
                     
         ### DEFINE the fitness function equation to avoid collision
-        avoidCollisionFitness = -(sum(self.inputs[3:12])/len(self.inputs[3:12]))*1.5
+        avoidCollisionFitness = -(sum(self.inputs[3:12])/len(self.inputs[3:12]))*3
         
         ### DEFINE the fitness function equation to avoid spining behaviour
-        spinningFitness = -abs(self.velocity_right-self.velocity_left)/4
+        spinningFitness = -abs(abs(self.velocity_right)-abs(self.velocity_left))/2
 
         ### DEFINE the fitness function equation to promote line following 
         lineFitness = (1 - abs(sum(self.inputs[0:3]) / len(self.inputs[0:3])))*1.5
