@@ -10,7 +10,7 @@ class SupervisorGA:
         # Simulation Parameters
         # Please, do not change these parameters
         self.time_step = 32 # ms
-        self.time_experiment = 75 # s
+        self.time_experiment = 90 # s
         
         # Initiate Supervisor Module
         self.supervisor = Supervisor()
