@@ -36,9 +36,9 @@ class SupervisorGA:
         
         ###########
         ### DEFINE here the 3 GA Parameters:
-        self.num_generations = 30
-        self.num_population = 2
-        self.num_elite = 1
+        self.num_generations = 100
+        self.num_population = 10
+        self.num_elite = 2
         
         # size of the genotype variable
         self.num_weights = 0
@@ -115,7 +115,7 @@ class SupervisorGA:
             FINAL_ROT=np.array([0.0,0.0,1,1.6])
             robot_trans=np.array(self.trans_field.getSFVec3f())
             robot_rot=np.array(self.rot_field.getSFVec3f())  
-            delta_trans = 4/(abs(sum(robot_trans-FINAL_TRANS)))
+            delta_trans = 1.5/(abs(sum(robot_trans-FINAL_TRANS)))
             delta_rot = (abs(sum(robot_rot-FINAL_ROT)))*0.05
             robot_trans_avoid = -abs(sum(robot_trans - AVOID_TRANS)) * 0.008 
 
@@ -142,11 +142,12 @@ class SupervisorGA:
             # Measure fitness
             self.run_seconds(self.time_experiment)
             fitness = self.receivedFitness
+            print(self.receivedFitness)
             # Reward
             fitness+= self.calc_reward(AVOID_TRANS_LEFT)
             print("Fitness: {}".format(fitness))     
             # Add fitness value to the vector
-            fitnessPerTrial.append(fitness)
+            fitnessPerTrial.append(fitness*20)
             
             #######################################
             # TRIAL: TURN !?
@@ -157,13 +158,14 @@ class SupervisorGA:
             # Evaluation genotype 
             # Measure fitness
             self.run_seconds(self.time_experiment)
+            print(self.receivedFitness)
             fitness = self.receivedFitness
             # Reward
             fitness+=self.calc_reward(AVOID_TRANS_RIGHT)
             print("Fitness: {}".format(fitness))
 
             # Add fitness value to the vector
-            fitnessPerTrial.append(fitness)
+            fitnessPerTrial.append(fitness*20)
             currentInteraction += 1
         fitness = np.mean(fitnessPerTrial)
         current = (generation,genotype,fitness)
