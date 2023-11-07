@@ -70,7 +70,8 @@ class Controller:
         elif not any(self.proximity[1:7]):
             self.close=False
         # line exit event
-        if not self.go_around and (all(self.groundp) and not any(self.ground)) and self.close:
+        if not self.go_around and (all(self.groundp) \
+            and not any(self.ground)) and self.close:
             self.go_around=True
         # line enter event
         elif self.go_around and (all(self.ground)):

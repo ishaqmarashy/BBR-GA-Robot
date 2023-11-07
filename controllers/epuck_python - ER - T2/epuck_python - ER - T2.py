@@ -2,7 +2,7 @@ from controller import Robot, Receiver, Emitter
 import sys,struct,math
 import numpy as np
 import mlp as ntw
-
+log=False
 class Controller:
     def __init__(self, robot):        
         # Robot Parameters
@@ -12,7 +12,7 @@ class Controller:
         self.max_speed = 5  # m/s
  
         self.number_input_layer = 12
-        self.number_hidden_layer = [41,7,7,7]
+        self.number_hidden_layer = [41,7,7]
         self.number_output_layer = 2
         
         self.number_neuros_per_layer = []
@@ -53,6 +53,11 @@ class Controller:
         self.right_ir = self.robot.getDevice('gs2')
         self.right_ir.enable(self.time_step)
         
+         # Enable Light Sensors
+        self.light_sensors = []
+        self.light_sensors.append(self.robot.getDevice('ls4'))
+        self.light_sensors[0].enable(self.time_step)
+        
         # Enable Emitter and Receiver (to communicate with the Supervisor)
         self.emitter = self.robot.getDevice("emitter") 
         self.receiver = self.robot.getDevice("receiver") 
@@ -64,11 +69,17 @@ class Controller:
         # Fitness value (initialization fitness parameters once)
         self.fitness_values = []
         self.fitness = 0
-                
-        # Enable Light Sensors
-        self.light_sensors = []
-        self.light_sensors.append(self.robot.getDevice('ls4'))
-        self.light_sensors[0].enable(self.time_step)
+        if log:
+            self.forwardFitness = []
+            self.forwardFitness_values = 0
+            self.avoidCollisionFitness = []
+            self.avoidCollisionFitness_values = 0
+            self.spinningFitness = []
+            self.spinningFitness_values = 0
+            self.lineFitness = []
+            self.lineFitness_values = 0
+                    
+
 
     def check_for_new_genes(self):
         if(self.flagMessage == True):
@@ -118,52 +129,85 @@ class Controller:
     def calculate_fitness(self):
         ### DEFINE the fitness function to increase the speed of the robot and 
         ### to encourage the robot to move forwardAVOID_TRANS_RIGHT
-        forwardFitness = ((abs(self.velocity_right) + abs(self.velocity_left)) / (2 * self.max_speed))*4.1
-                    
+        
+        forwardFitness = (8*(self.velocity_left + self.velocity_right)) / (2 * self.max_speed)
+        forwardFitness*= 2.1
         ### DEFINE the fitness function equation to avoid collision
-        avoidCollisionFitness = -(sum(self.inputs[3:12])/len(self.inputs[3:12]))*3
-        
+        avoidCollisionFitness = -sum(self.inputs[3:12]) / len(self.inputs[3:12]) 
+        avoidCollisionFitness*= 1
         ### DEFINE the fitness function equation to avoid spining behaviour
-        spinningFitness = -abs(abs(self.velocity_right)-abs(self.velocity_left))/2
-
+        spinningFitness = min(self.velocity_right, self.velocity_left) - max(self.velocity_right, self.velocity_left)
+        spinningFitness *= 0.5
         ### DEFINE the fitness function equation to promote line following 
-        lineFitness = (1 - abs(sum(self.inputs[0:3]) / len(self.inputs[0:3])))*1.5
+        lineFitness = 1/(sum(self.inputs[0:3]) / len(self.inputs[0:3]))
+        lineFitness*= 2.5
         
+
         ### DEFINE the fitness function equation of this iteration which should be a combination of the previous functions         
         combinedFitness = avoidCollisionFitness + spinningFitness + lineFitness + forwardFitness
 
-        # print(round(lineFitness, 2), round(forwardFitness , 2), round(avoidCollisionFitness, 2), round(spinningFitness, 2), combinedFitness)
         self.fitness_values.append(combinedFitness)
-        self.fitness = np.mean(self.fitness_values) 
+        self.fitness = np.mean(self.fitness_values)
+        if log:
+            self.spinningFitness.append(spinningFitness)
+            self.spinningFitness_values = np.mean(self.spinningFitness) 
+            self.forwardFitness.append(forwardFitness)
+            self.forwardFitness_values = np.mean(self.forwardFitness) 
+            self.avoidCollisionFitness.append(avoidCollisionFitness)
+            self.avoidCollisionFitness_values = np.mean(self.avoidCollisionFitness) 
+            self.lineFitness.append(lineFitness)
+            self.lineFitness_values = np.mean(self.lineFitness) 
 
     def handle_emitter(self):
+        # Send the self.fitness value to the supervisor
         data = str(self.number_weights)
         data = "weights: " + data
         string_message = str(data)
         string_message = string_message.encode("utf-8")
+        #print("Robot send:", string_message)
         self.emitter.send(string_message)
+
+        # Send the self.fitness value to the supervisor
         data = str(self.fitness)
         data = "fitness: " + data
         string_message = str(data)
         string_message = string_message.encode("utf-8")
+        #print("Robot send fitness:", string_message)
+
+        if log:
+            print('--')
+            print(self.spinningFitness_values)
+            print(self.forwardFitness_values)
+            print(self.avoidCollisionFitness_values)
+            print(self.lineFitness_values)
+
         self.emitter.send(string_message)
             
     def handle_receiver(self):
         if self.receiver.getQueueLength() > 0:
             while(self.receiver.getQueueLength() > 0):
                 # Adjust the Data to our model
+                #Webots 2022:
+                #self.receivedData = self.receiver.getData().decode("utf-8")
+                #Webots 2023:
                 self.receivedData = self.receiver.getString()
                 self.receivedData = self.receivedData[1:-1]
                 self.receivedData = self.receivedData.split()
                 x = np.array(self.receivedData)
                 self.receivedData = x.astype(float)
+                #print("Controller handle receiver data:", self.receivedData)
                 self.receiver.nextPacket()
+                
+            # Is it a new Genotype?
             if(np.array_equal(self.receivedDataPrevious,self.receivedData) == False):
                 self.flagMessage = True
+                
             else:
                 self.flagMessage = False
+                
             self.receivedDataPrevious = self.receivedData 
         else:
+            #print("Controller receiver q is empty")
             self.flagMessage = False
 
     def run_robot(self):        
