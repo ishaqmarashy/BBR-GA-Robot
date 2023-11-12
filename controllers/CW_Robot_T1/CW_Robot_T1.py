@@ -82,6 +82,12 @@ class Controller:
         # disable line follow module till next line enter event
         if any(self.proximity[0:2]) or any(self.proximity[6:8]):
             self.go_around=True
+        # check for light event
+        if not self.beacon:
+                for i in range(8):
+                        if self.light_sensors[i].getValue()<2000:
+                            self.beacon=True
+                            break
 
     # follow line module
     def follow_line(self):
@@ -101,10 +107,8 @@ class Controller:
                 self.lr(0.4,0.4)
             elif not self.beacon and not self.ground[0] and not self.ground[1] and not self.ground[2]:
                 self.lr(0.5,0.1)
-                pass
             elif not self.ground[0] and not self.ground[1] and not self.ground[2]:
                 self.lr(0.1,0.5)
-                pass
             elif not self.beacon:
                 self.lr(0.1,0.5)
             else:
@@ -158,12 +162,6 @@ class Controller:
             for i in range(8):
                 self.proximity.append(False if self.proximity_sensors[i].getValue() < 250 else True)
             
-            # Check Light Sensors
-            if not self.beacon:
-                for i in range(8):
-                        if self.light_sensors[i].getValue()<2000:
-                            self.beacon=True
-                            break
             # run modules
             self.sense_compute_and_actuate()
         # loop ended, print simulation time and stop motors 
