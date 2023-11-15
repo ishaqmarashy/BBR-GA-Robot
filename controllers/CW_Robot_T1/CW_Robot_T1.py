@@ -8,7 +8,7 @@ class Controller:
         # Robot Parameters
         self.robot = robot
         self.time_step = 32 # ms
-        self.max_speed = 5.3  # m/s
+        self.max_speed = 5.0 # m/s
  
         # Enable Motors
         self.left_motor = self.robot.getDevice('left wheel motor')
@@ -27,7 +27,11 @@ class Controller:
         self.go_around=False
         self.close=False
         self.beacon=False
-
+        self.receiver = self.robot.getDevice("receiver") 
+        self.receiver.enable(self.time_step)
+        self.receivedData = "" 
+        self.receivedDataPrevious = "" 
+        self.flagMessage = False
         # Enable Proximity Sensors
         for i in range(8):
             sensor_name = 'ps' + str(i)
@@ -137,6 +141,30 @@ class Controller:
             else:
                 self.lr(0.5,0.1)
 
+    def handle_receiver(self):
+        if self.receiver.getQueueLength() > 0:
+            while(self.receiver.getQueueLength() > 0):
+                # Adjust the Data to our model
+                #Webots 2022:
+                #self.receivedData = self.receiver.getData().decode("utf-8")
+                #Webots 2023:
+                self.receivedData = self.receiver.getString()
+                #print("Controller handle receiver data:", self.receivedData)
+                # print(self.receivedData)
+                self.receiver.nextPacket()
+            # Is it a new Genotype?
+            if(self.receivedDataPrevious!=self.receivedData):
+                self.line_end = False
+                self.stop = False
+                self.beacon=False
+                self.flagMessage = True
+            else:
+                self.flagMessage = False
+            self.receivedDataPrevious = self.receivedData 
+        else:
+            self.flagMessage = False
+
+
     def sense_compute_and_actuate(self):
         # run modules
         self.lr(0,0)
@@ -157,19 +185,18 @@ class Controller:
                             self.right_ir.getValue()]]
             
             # read and map proximity sensor values to True/False 
-            # 300 is a threshold for sensor values when it finds black colored floor 
-            self.proximity = []
-            for i in range(8):
-                self.proximity.append(False if self.proximity_sensors[i].getValue() < 250 else True)
-            
-            # run modules
+            # 250 is a threshold for sensor values when it finds black colored floor 
+            self.proximity = [False if x.getValue() < 250 else True for x in self.proximity_sensors]
             self.sense_compute_and_actuate()
-        # loop ended, print simulation time and stop motors 
-        print("Time:",self.robot.getTime())
+            if self.stop:
+                print("Time:",self.robot.getTime())
         self.lr(0,0)
+        
       
 if __name__ == "__main__":
     my_robot = Robot()
     controller = Controller(my_robot)
-    controller.run_robot()
+    while True:
+        controller.run_robot()
+        controller.handle_receiver()
     

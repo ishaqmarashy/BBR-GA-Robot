@@ -10,9 +10,9 @@ import ga,os,sys,struct
 class SupervisorGA:
     def __init__(self):
     # --------------------------------------------------------------------------------------------
-        self.num_generations = 10000
-        self.num_population = 5
-        self.num_elite = 2
+        self.num_generations = 100
+        self.num_population = 8
+        self.num_elite = 1
         
         # Simulation Parameters
         self.time_experiment = 90 # s
@@ -103,8 +103,6 @@ class SupervisorGA:
 
     def handle_receiver(self):
         while(self.receiver.getQueueLength() > 0):
-            #Webots 2022: 
-            #self.receivedData = self.receiver.getData().decode("utf-8")
             #Webots 2023: 
             self.receivedData = self.receiver.getString()
             typeMessage = self.receivedData[0:7]
@@ -125,7 +123,6 @@ class SupervisorGA:
             self.emitter.send(string_message)     
         
     def run_seconds(self,seconds):
-        #print("Run Simulation")
         stop = int((seconds*1000)/self.time_step)
         iterations = 0
         while self.supervisor.step(self.time_step) != -1:
@@ -136,21 +133,25 @@ class SupervisorGA:
             iterations = iterations + 1
 
     # reward given to fitness if robot gets closer to pos
-    def reward(self,right):
+    def reward(self,left):
             FINAL_TRANS=np.array([0.10824,0.931462,0.00173902])
             robot_trans=np.array(self.trans_field.getSFVec3f())
-            delta_trans = (2/(np.linalg.norm(robot_trans - FINAL_TRANS)+0.01))
-            if right:
-                robot_trans_avoid = (1/(np.linalg.norm(robot_trans - self.obs_cyn1_initial_translation)+0.01))
+            delta_trans = (3.0/(np.linalg.norm(robot_trans - FINAL_TRANS)+0.01))
+            if left:
+                robot_trans_avoid = (2.0/(np.linalg.norm(robot_trans - self.obs_cyn1_initial_translation)+0.01))
+                robot_trans_avoid += (10/(np.linalg.norm(robot_trans - self.boxr_initial_translation)+0.01))
             else:
-                robot_trans_avoid = (1/(np.linalg.norm(robot_trans - self.boxl_initial_translation)+0.01))
-            reward=delta_trans/8
-            reward*=robot_trans_avoid/8
-            print(f'G{round(delta_trans/8,2)}|A{round(robot_trans_avoid/8,2)}')
-
+                robot_trans_avoid = (2.0/(np.linalg.norm(robot_trans - self.boxl_initial_translation)+0.01))
+                robot_trans_avoid += (1.0/(np.linalg.norm(robot_trans - self.obs_cyn2_initial_translation)+0.01))
+            delta_trans=delta_trans/4.0
+            robot_trans_avoid=robot_trans_avoid/32.0
+            reward=delta_trans
+            reward+=robot_trans_avoid
+            print(f'G{round(delta_trans,3)}|A{round(robot_trans_avoid,3)}')
+            # return 1
             return reward
 
-    def reset_env(self, genotype, right):
+    def reset_env(self, genotype, left):
         self.boxr_t.setSFVec3f(self.boxr_initial_translation)
         self.boxr_r.setSFRotation(self.boxr_initial_rotation)
         self.obs_cyn1_t.setSFVec3f(self.obs_cyn1_initial_translation)
@@ -160,65 +161,32 @@ class SupervisorGA:
         INITIAL_ROT = [-1.26771e-05, 1.18836e-05, 1, 1.63194]
         INITIAL_TRANS = [-0.685987, -0.66, -6.39627e-05]
         self.emitterData = str(genotype)
-        self.light_on_field.setSFBool(not right)
+        self.light_on_field.setSFBool(not left)
         self.trans_field.setSFVec3f(INITIAL_TRANS)
         self.rot_field.setSFRotation(INITIAL_ROT)
         self.robot_node.resetPhysics()
         
     def evaluate_genotype(self,genotype,generation):
-        # Here you can choose how many times the current individual will interact with both environments
-        # At each interaction loop, one trial on each environment will be performed
-        numberofInteractionLoops = 1
-        currentInteraction = 0
         fitnessPerTrial = []
-        while currentInteraction < numberofInteractionLoops:
-            #######################################
-            # TRIAL: TURN RIGHT
-            #######################################
-            # Send genotype to robot for evaluation
-            self.emitterData = str(genotype)
-            
-            # Reset robot position and physics
-            self.reset_env(genotype,False)
-            
-            # Evaluation genotype 
-            self.run_seconds(self.time_experiment)
-        
-            # Measure fitness
-            fitness = self.receivedFitness
-            
-            # Check for Reward and add it to the fitness value here
-            # Add your code here
+        left=False
+        # TRIAL: TURN RIGHT
+        self.emitterData = str(genotype)
+        self.reset_env(genotype,left)
+        self.run_seconds(self.time_experiment)
+        fitness = self.receivedFitness
+        fitness*=self.reward(not left)#=0------------------------------------------------------------------------------
+        fitnessPerTrial.append(fitness)
+        print("Fitness: {}".format(fitness))     
 
-            fitness*=self.reward(True)#=0------------------------------------------------------------------------------
-            print("Fitness: {}".format(fitness))     
-                        
-            # Add fitness value to the vector
-            fitnessPerTrial.append(fitness)
-            
-            #######################################
-            # TRIAL: TURN LEFT
-            #######################################
-            # Send genotype to robot for evaluation
-            self.emitterData = str(genotype)
-            
-            # Reset robot position and physics
-            self.reset_env(genotype,True)
-        
-            # Evaluation genotype 
-            self.run_seconds(self.time_experiment)
-        
-            # Measure fitness
-            fitness = self.receivedFitness
-            fitness*=self.reward(False)#=0------------------------------------------------------------------------------
-            print("Fitness: {}".format(fitness))
-            
-            # Add fitness value to the vector
-            fitnessPerTrial.append(fitness)
-            
-            # End 
-            currentInteraction += 1
-            
+        # TRIAL: TURN LEFT
+        self.emitterData = str(genotype)
+        self.reset_env(genotype,not left)
+        self.run_seconds(self.time_experiment)
+        fitness = self.receivedFitness
+        fitness*=self.reward(left)#=0------------------------------------------------------------------------------
+        fitnessPerTrial.append(fitness)
+        print("Fitness: {}".format(fitness))
+
         fitness = np.mean(fitnessPerTrial)
         current = (generation,genotype,fitness)
         self.genotypes.append(current)  
@@ -228,36 +196,18 @@ class SupervisorGA:
     def run_demo(self):
         # Read File
         genotype = np.load("Best.npy")
-        
-        # Turn Left
-        
-        # Send Genotype to controller
         self.emitterData = str(genotype) 
         self.reset_env(genotype,False)
-
-    
-        # Evaluation genotype 
         self.run_seconds(self.time_experiment) 
-        
-        # Measure fitness
         fitness = self.receivedFitness
         FINAL=[-0.21,0.69,0.05]
         fitness+=self.reward(FINAL)
-
         print("Fitness with reward : {}".format(fitness))
         
         # Turn Right
-        
-        # Send Genotype to controller
         self.emitterData = str(genotype) 
-        
-        # Reset robot position and physics
         self.reset_env(genotype,False)
-    
-        # Evaluation genotype 
         self.run_seconds(self.time_experiment)  
-        
-        # Measure fitness
         fitness = self.receivedFitness
         FINAL=[0.38,0.71,0.05]
         fitness+=self.reward(FINAL)
@@ -268,8 +218,6 @@ class SupervisorGA:
         while(self.num_weights == 0):
             self.handle_receiver()
             self.createRandomPopulation()
-        
-        print(">>>Starting Evolution using GA optimization ...\n")
         
         # For each Generation
         for generation in range(self.num_generations):
@@ -301,12 +249,14 @@ class SupervisorGA:
     
     
     def draw_scaled_line(self, generation, y1, y2): 
+        return
         # the scale of the fitness plot
-        XSCALE = int(self.width/self.num_generations);
-        YSCALE = 1000;
+        XSCALE = int(self.width/self.num_generations)*50;
+        YSCALE = 10000;
         self.display.drawLine((generation-1)*XSCALE, self.height-int(y1*YSCALE), generation*XSCALE, self.height-int(y2*YSCALE));
     
     def plot_fitness(self, generation, best_fitness, average_fitness):
+        return
         if (generation > 0):
             self.display.setColor(0xff0000);  # red
             self.draw_scaled_line(generation, self.prev_best_fitness, best_fitness);
@@ -325,12 +275,7 @@ if __name__ == "__main__":
     # Function used to run the best individual or the GA
     keyboard = Keyboard()
     keyboard.enable(50)
-    
-    # Interface
-    print("***************************************************************************************************")
-    print("To start the simulation please click anywhere in the SIMULATION WINDOW(3D Window) and press either:")
     print("(S|s)to Search for New Best Individual OR (R|r) to Run Best Individual")
-    print("***************************************************************************************************")
     
     while gaModel.supervisor.step(gaModel.time_step) != -1:
         resp = keyboard.getKey()
