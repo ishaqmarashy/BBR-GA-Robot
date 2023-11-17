@@ -10,7 +10,7 @@ import ga,os,sys,struct
 class SupervisorGA:
     def __init__(self):
     # --------------------------------------------------------------------------------------------
-        self.num_generations = 100
+        self.num_generations = 10000
         self.num_population = 8
         self.num_elite = 1
         
@@ -79,13 +79,14 @@ class SupervisorGA:
         self.genotypes = []
         
         # Display: screen to plot the fitness values of the best individual and the average of the entire population
-        self.display = self.supervisor.getDevice("display")
-        self.width = self.display.getWidth()
-        self.height = self.display.getHeight()
         self.prev_best_fitness = 0.0;
         self.prev_average_fitness = 0.0;
-        self.display.drawText("Fitness (Best - Red)", 0,0)
-        self.display.drawText("Fitness (Average - Green)", 0,10)
+        # self.display = self.supervisor.getDevice("display")
+        # self.width = self.display.getWidth()
+        # self.height = self.display.getHeight()
+
+        # self.display.drawText("Fitness (Best - Red)", 0,0)
+        # self.display.drawText("Fitness (Average - Green)", 0,10)
         # Light
         self.light_node = self.supervisor.getFromDef("Light")
         if self.light_node is None:
@@ -168,7 +169,7 @@ class SupervisorGA:
         
     def evaluate_genotype(self,genotype,generation):
         fitnessPerTrial = []
-        left=False
+        left=True
         # TRIAL: TURN RIGHT
         self.emitterData = str(genotype)
         self.reset_env(genotype,left)
@@ -238,7 +239,7 @@ class SupervisorGA:
             best = ga.getBestGenotype(current_population);
             average = ga.getAverageGenotype(current_population);
             np.save("Best.npy",best[0])
-            self.plot_fitness(generation, best[1], average);
+            # self.plot_fitness(generation, best[1], average);
             
             # Generate the new population using genetic operators
             if (generation < self.num_generations - 1):
@@ -249,14 +250,12 @@ class SupervisorGA:
     
     
     def draw_scaled_line(self, generation, y1, y2): 
-        return
         # the scale of the fitness plot
         XSCALE = int(self.width/self.num_generations)*50;
         YSCALE = 10000;
         self.display.drawLine((generation-1)*XSCALE, self.height-int(y1*YSCALE), generation*XSCALE, self.height-int(y2*YSCALE));
     
     def plot_fitness(self, generation, best_fitness, average_fitness):
-        return
         if (generation > 0):
             self.display.setColor(0xff0000);  # red
             self.draw_scaled_line(generation, self.prev_best_fitness, best_fitness);

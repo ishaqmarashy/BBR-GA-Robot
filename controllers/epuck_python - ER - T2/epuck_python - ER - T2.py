@@ -17,7 +17,7 @@ class Controller:
         ### DEFINE below the architecture of your MLP network:
          
         self.number_input_layer = 12
-        self.number_hidden_layer = [12,12,12,12,12] 
+        self.number_hidden_layer = [12,12,12,12] 
         self.number_output_layer = 2
         
         # Create a list with the number of neurons per layer
@@ -48,7 +48,7 @@ class Controller:
         self.right_motor.setVelocity(0.0)
         self.velocity_left = 0.0
         self.velocity_right = 0.0
-    
+        self.ls_prev=0
         # Enable Proximity Sensors
         self.proximity_sensors = []
         for i in range(8):
@@ -64,6 +64,7 @@ class Controller:
         self.right_ir = self.robot.getDevice('gs2')
         self.right_ir.enable(self.time_step)
 
+        self.led= self.robot.getDevice('led0')
         self.light_sensors = []
         for i in range(8):
             sensor_name = 'ls' + str(i)
@@ -139,22 +140,32 @@ class Controller:
             
     def calculate_fitness(self):
         # print(np.round(self.inputs,2))
-
+        
         ### DEFINE the fitness function to increase the speed of the robot and 
         ### to encourage the robot to move forward
         forwardFitness =self.bin(-self.max_speed,self.max_speed,(self.velocity_left+self.velocity_right))
         forwardFitness*=1.0
         ### DEFINE the fitness function equation to line leaving behaviour
-
-        lineFitness =np.sum(1-self.inputs[0:3])/3.0
+        if(np.sum(1-self.inputs[0:3])/3.0==0):
+            lineFitness = np.max(self.inputs[3:11])*0.4
+        else:
+            lineFitness = math.sqrt(1-(np.max(self.inputs[0:3])/3.0))
+            if sum(self.inputs[3:11])>=2.5:
+                lineFitness*=2.0
         lineFitness*=1.0
         
         ### DEFINE the fitness function equation to avoid collision
-        avoidCollisionFitness = 1.0-math.sqrt(np.max(self.inputs[3:11]))
-        avoidCollisionFitness*=1.0
+        avoidCollisionFitness=1
+        # if np.sum(self.inputs[3:11])>=2.5:
+        #     avoidCollisionFitness = 2
+        # elif np.sum(self.inputs[3:11])==1:
+        #     avoidCollisionFitness = 1
+        # else:
+        #     avoidCollisionFitness = 1.0-math.sqrt(np.max(self.inputs[3:11]))
+        avoidCollisionFitness*= 1.0
 
         ### DEFINE the fitness function equation to avoid spining behaviour
-        spinningFitness = self.bin(0.0,1.0,1.0-math.sqrt(abs(self.velocity_left-self.velocity_right)))
+        spinningFitness = 1.0-self.bin(0.0,1.0,math.sqrt(abs(self.velocity_left-self.velocity_right)))
         spinningFitness*=1.0
         ### DEFINE the fitness function equation of this iteration which should be a combination of the previous functions         
         combinedFitness = forwardFitness*lineFitness*spinningFitness*avoidCollisionFitness
@@ -194,6 +205,7 @@ class Controller:
                 self.receiver.nextPacket()
             if(np.array_equal(self.receivedDataPrevious,self.receivedData) == False):
                 self.flagMessage = True
+                self.ls_prev=0
             else:
                 self.flagMessage = False
             self.receivedDataPrevious = self.receivedData 
@@ -203,6 +215,7 @@ class Controller:
 
     
     def run_robot(self):        
+        self.inputs =[]
         while self.robot.step(self.time_step) != -1:
             self.inputs =[]
             self.handle_emitter()
@@ -210,9 +223,18 @@ class Controller:
             
             self.inputs+=self.bin(350,500,[self.left_ir.getValue(),self.center_ir.getValue(),self.right_ir.getValue()])
             self.inputs+=self.bin(100,200,[x.getValue() for x in self.proximity_sensors])
-            self.inputs+=[self.bin(300,500,min([x.getValue()  for x in self.light_sensors]))]
-            self.inputs=np.array(self.inputs)
 
+            # light sensor decay sensor will read 1 while decaying from 1 by a factor of 0.001
+            # while above 0.3 input will be 1 and when its below input will be 0
+            ls=1-self.bin(300,500,min([x.getValue()  for x in self.light_sensors]))
+            if ls==1:
+                self.inputs+=[ls]
+                self.ls_prev=ls
+            else:
+                self.ls_prev=self.ls_prev*0.999
+                self.inputs+=[self.bin(0.2,0.30,self.ls_prev)]
+            self.inputs=np.array(self.inputs)
+            self.led.set(int(self.inputs[len(self.inputs)-1]))
             self.check_for_new_genes()
             self.sense_compute_and_actuate()
             self.calculate_fitness()
