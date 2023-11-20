@@ -2,6 +2,7 @@ from controller import Robot, Receiver, Emitter
 import sys,struct,math
 import numpy as np
 import mlp as ntw
+np.random.seed(0)  
 
 class Controller:
     def __init__(self, robot):        
@@ -9,15 +10,13 @@ class Controller:
         # Please, do not change these parameters
         self.robot = robot
         self.time_step = 32 # ms
-        self.max_speed = 6.28  # m/s
+        self.max_speed = 4  # m/s
  
         # MLP Parameters and Variables 
-          
         ###########
         ### DEFINE below the architecture of your MLP network:
-         
-        self.number_input_layer = 12
-        self.number_hidden_layer = [12,12,12,12] 
+        self.number_input_layer = 13
+        self.number_hidden_layer = [13,13,13,13] 
         self.number_output_layer = 2
         
         # Create a list with the number of neurons per layer
@@ -49,6 +48,7 @@ class Controller:
         self.velocity_left = 0.0
         self.velocity_right = 0.0
         self.ls_prev=0
+        self.line_prev=0
         # Enable Proximity Sensors
         self.proximity_sensors = []
         for i in range(8):
@@ -64,7 +64,6 @@ class Controller:
         self.right_ir = self.robot.getDevice('gs2')
         self.right_ir.enable(self.time_step)
 
-        self.led= self.robot.getDevice('led0')
         self.light_sensors = []
         for i in range(8):
             sensor_name = 'ls' + str(i)
@@ -120,6 +119,7 @@ class Controller:
         # MLP: 
         #   Input == sensory data
         #   Output == motors commands
+        # print(np.round(self.inputs,2))
         output = self.network.propagate_forward(self.inputs)
         self.velocity_left = output[0]
         self.velocity_right = output[1]
@@ -139,42 +139,33 @@ class Controller:
                 return (val-min_val)/(max_val-min_val)
             
     def calculate_fitness(self):
-        # print(np.round(self.inputs,2))
-        
         ### DEFINE the fitness function to increase the speed of the robot and 
         ### to encourage the robot to move forward
-        forwardFitness =self.bin(-self.max_speed,self.max_speed,(self.velocity_left+self.velocity_right))
-        forwardFitness*=1.0
+        forwardFitness =self.bin(0,self.max_speed,(self.velocity_left+self.velocity_right))
+        forwardFitness*= 1.0
         ### DEFINE the fitness function equation to line leaving behaviour
-        if(np.sum(1-self.inputs[0:3])/3.0==0):
-            lineFitness = np.max(self.inputs[3:11])*0.4
-        else:
-            lineFitness = math.sqrt(1-(np.max(self.inputs[0:3])/3.0))
-            if sum(self.inputs[3:11])>=2.5:
-                lineFitness*=2.0
-        lineFitness*=1.0
-        
+        lineFitness = self.inputs[12]
+        lineFitness*= 1.0
         ### DEFINE the fitness function equation to avoid collision
-        avoidCollisionFitness=1
-        # if np.sum(self.inputs[3:11])>=2.5:
-        #     avoidCollisionFitness = 2
-        # elif np.sum(self.inputs[3:11])==1:
-        #     avoidCollisionFitness = 1
-        # else:
-        #     avoidCollisionFitness = 1.0-math.sqrt(np.max(self.inputs[3:11]))
-        avoidCollisionFitness*= 1.0
-
+        avoidCollisionFitness = 1-np.max(self.inputs[3:11])
+        avoidCollisionFitness*= 1
         ### DEFINE the fitness function equation to avoid spining behaviour
-        spinningFitness = 1.0-self.bin(0.0,1.0,math.sqrt(abs(self.velocity_left-self.velocity_right)))
-        spinningFitness*=1.0
+        spinningFitness = 1-self.bin(0,self.max_speed,abs(self.velocity_left - self.velocity_right))
+        spinningFitness*= 1.0
+        if self.inputs[11]==1.0:
+            turnFitness = 1.0 if self.velocity_right <= self.velocity_left else 0.4
+        else:
+            turnFitness = 1.0 if self.velocity_left <= self.velocity_right else 0.4
+
         ### DEFINE the fitness function equation of this iteration which should be a combination of the previous functions         
-        combinedFitness = forwardFitness*lineFitness*spinningFitness*avoidCollisionFitness
-                
-        
-        # combinedFitness=round(combinedFitness,2)
+        combinedFitness = lineFitness*(spinningFitness+forwardFitness+turnFitness+avoidCollisionFitness)
         self.fitness_values.append(combinedFitness)
         fitm=np.mean(self.fitness_values) 
-        # print(np.round([forwardFitness,lineFitness,avoidCollisionFitness,spinningFitness,combinedFitness,fitm],3))
+        # print(np.round([spinningFitness,forwardFitness, lineFitness,turnFitness,fitm],2))
+        # print(np.round(self.inputs[11:],2))
+        # print(np.round(self.inputs,2))
+        # print(round(combinedFitness,3))
+        # print(self.inputs[11])
         self.fitness = fitm
 
     def handle_emitter(self):
@@ -183,7 +174,6 @@ class Controller:
         data = "weights: " + data
         string_message = str(data)
         string_message = string_message.encode("utf-8")
-        #print("Robot send:", string_message)
         self.emitter.send(string_message)
 
         # Send the self.fitness value to the supervisor
@@ -191,7 +181,6 @@ class Controller:
         data = "fitness: " + data
         string_message = str(data)
         string_message = string_message.encode("utf-8")
-        #print("Robot send fitness:", string_message)
         self.emitter.send(string_message)
             
     def handle_receiver(self):
@@ -206,14 +195,13 @@ class Controller:
             if(np.array_equal(self.receivedDataPrevious,self.receivedData) == False):
                 self.flagMessage = True
                 self.ls_prev=0
+                self.fitness = 0.0
             else:
                 self.flagMessage = False
             self.receivedDataPrevious = self.receivedData 
         else:
             self.flagMessage = False
 
-
-    
     def run_robot(self):        
         self.inputs =[]
         while self.robot.step(self.time_step) != -1:
@@ -224,20 +212,27 @@ class Controller:
             self.inputs+=self.bin(350,500,[self.left_ir.getValue(),self.center_ir.getValue(),self.right_ir.getValue()])
             self.inputs+=self.bin(100,200,[x.getValue() for x in self.proximity_sensors])
 
-            # light sensor decay sensor will read 1 while decaying from 1 by a factor of 0.001
             # while above 0.3 input will be 1 and when its below input will be 0
-            ls=1-self.bin(300,500,min([x.getValue()  for x in self.light_sensors]))
-            if ls==1:
-                self.inputs+=[ls]
+            ls=self.bin(300,500,min([x.getValue()  for x in self.light_sensors]))
+            if ls==0:
                 self.ls_prev=ls
             else:
+                # 0.155 at 60s
                 self.ls_prev=self.ls_prev*0.999
-                self.inputs+=[self.bin(0.2,0.30,self.ls_prev)]
-            self.inputs=np.array(self.inputs)
-            self.led.set(int(self.inputs[len(self.inputs)-1]))
+
+            if 1-np.min(self.inputs[0:3])==1.0:
+                self.line_prev=1
+            else:
+                # 0.04 at 10s
+                self.line_prev*=0.99
+
+            self.inputs+=[1.0 if self.ls_prev > 0.155 else 0]
+            self.inputs+=[1.0 if self.line_prev > 0.04 else 0]
+            self.inputs=np.round(self.inputs,3)
+
             self.check_for_new_genes()
-            self.sense_compute_and_actuate()
             self.calculate_fitness()
+            self.sense_compute_and_actuate()
             
 if __name__ == "__main__":
     # Call Robot function to initialize the robot

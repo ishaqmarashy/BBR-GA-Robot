@@ -3,23 +3,23 @@ from controller import Keyboard
 from controller import Display
 
 import numpy as np
-import ga,os,sys,struct
+import ga,os,sys,struct,math,csv
 
+np.random.seed(0)  
 
-        
 class SupervisorGA:
     def __init__(self):
     # --------------------------------------------------------------------------------------------
-        self.num_generations = 10000
-        self.num_population = 8
-        self.num_elite = 1
+        self.num_generations = 1000
+        self.num_population = 20
+        self.num_elite = 2
         
         # Simulation Parameters
-        self.time_experiment = 90 # s
+        self.time_experiment = 80 # s
     # --------------------------------------------------------------------------------------------
 
         # Please, do not change these parameters
-        self.time_step = 32 # ms
+        self.time_step = 32 # mss
         # Initiate Supervisor Module
         self.supervisor = Supervisor()
         # Check if the robot node exists in the current world file
@@ -79,12 +79,11 @@ class SupervisorGA:
         self.genotypes = []
         
         # Display: screen to plot the fitness values of the best individual and the average of the entire population
-        self.prev_best_fitness = 0.0;
-        self.prev_average_fitness = 0.0;
         # self.display = self.supervisor.getDevice("display")
         # self.width = self.display.getWidth()
         # self.height = self.display.getHeight()
-
+        # self.prev_best_fitness = 0.0;
+        # self.prev_average_fitness = 0.0;
         # self.display.drawText("Fitness (Best - Red)", 0,0)
         # self.display.drawText("Fitness (Average - Green)", 0,10)
         # Light
@@ -137,19 +136,12 @@ class SupervisorGA:
     def reward(self,left):
             FINAL_TRANS=np.array([0.10824,0.931462,0.00173902])
             robot_trans=np.array(self.trans_field.getSFVec3f())
-            delta_trans = (3.0/(np.linalg.norm(robot_trans - FINAL_TRANS)+0.01))
-            if left:
-                robot_trans_avoid = (2.0/(np.linalg.norm(robot_trans - self.obs_cyn1_initial_translation)+0.01))
-                robot_trans_avoid += (10/(np.linalg.norm(robot_trans - self.boxr_initial_translation)+0.01))
-            else:
-                robot_trans_avoid = (2.0/(np.linalg.norm(robot_trans - self.boxl_initial_translation)+0.01))
-                robot_trans_avoid += (1.0/(np.linalg.norm(robot_trans - self.obs_cyn2_initial_translation)+0.01))
-            delta_trans=delta_trans/4.0
-            robot_trans_avoid=robot_trans_avoid/32.0
+            # https://www.desmos.com/calculator/1ey118njhl
+            
+            delta_trans = (30/(math.pow(np.linalg.norm(robot_trans - FINAL_TRANS),2)+1))+1
             reward=delta_trans
-            reward+=robot_trans_avoid
-            print(f'G{round(delta_trans,3)}|A{round(robot_trans_avoid,3)}')
-            # return 1
+            print(f'G{delta_trans}')
+            # print(f'G{round(delta_trans,3)}|A{round(robot_trans_avoid,3)}')
             return reward
 
     def reset_env(self, genotype, left):
@@ -175,8 +167,7 @@ class SupervisorGA:
         self.reset_env(genotype,left)
         self.run_seconds(self.time_experiment)
         fitness = self.receivedFitness
-        fitness*=self.reward(not left)#=0------------------------------------------------------------------------------
-        fitnessPerTrial.append(fitness)
+        fitness*=self.reward(left)
         print("Fitness: {}".format(fitness))     
 
         # TRIAL: TURN LEFT
@@ -184,7 +175,7 @@ class SupervisorGA:
         self.reset_env(genotype,not left)
         self.run_seconds(self.time_experiment)
         fitness = self.receivedFitness
-        fitness*=self.reward(left)#=0------------------------------------------------------------------------------
+        fitness*=self.reward(not left)
         fitnessPerTrial.append(fitness)
         print("Fitness: {}".format(fitness))
 
@@ -195,67 +186,69 @@ class SupervisorGA:
         return fitness
 
     def run_demo(self):
+        left=True
         # Read File
         genotype = np.load("Best.npy")
         self.emitterData = str(genotype) 
-        self.reset_env(genotype,False)
+        self.reset_env(genotype,left)
         self.run_seconds(self.time_experiment) 
         fitness = self.receivedFitness
-        FINAL=[-0.21,0.69,0.05]
-        fitness+=self.reward(FINAL)
+        fitness+=self.reward(left)
         print("Fitness with reward : {}".format(fitness))
         
         # Turn Right
         self.emitterData = str(genotype) 
-        self.reset_env(genotype,False)
+        self.reset_env(genotype,not left)
         self.run_seconds(self.time_experiment)  
         fitness = self.receivedFitness
-        FINAL=[0.38,0.71,0.05]
-        fitness+=self.reward(FINAL)
+        fitness+=self.reward(not left)
         print("Fitness with reward: {}".format(fitness))    
     
     def run_optimization(self):
-        # Wait until the number of weights is updated
-        while(self.num_weights == 0):
-            self.handle_receiver()
-            self.createRandomPopulation()
-        
-        # For each Generation
-        for generation in range(self.num_generations):
-            print("Generation: {}".format(generation))
-            current_population = []   
-            # Select each Genotype or Individual
-            for population in range(self.num_population):
-                genotype = self.population[population]
-                # Evaluate
-                fitness = self.evaluate_genotype(genotype,generation)
-                #print(fitness)
-                # Save its fitness value
-                current_population.append((genotype,float(fitness)))
-                #print(current_population)
-                
-            # After checking the fitness value of all indivuals
-            # Save genotype of the best individual
-            best = ga.getBestGenotype(current_population);
-            average = ga.getAverageGenotype(current_population);
-            np.save("Best.npy",best[0])
-            # self.plot_fitness(generation, best[1], average);
+        with open("fitness_data.csv", mode='w', newline='') as csv_file:
+            writer = csv.writer(csv_file, delimiter=',')
+            # Wait until the number of weights is updated
+            while(self.num_weights == 0):
+                self.handle_receiver()
+                self.createRandomPopulation()
             
-            # Generate the new population using genetic operators
-            if (generation < self.num_generations - 1):
-                self.population = ga.population_reproduce(current_population,self.num_elite);
-        
-        #print("All Genotypes: {}".format(self.genotypes))
-        print("GA optimization terminated.\n")   
-    
+            # For each Generation
+            for generation in range(self.num_generations):
+                print("Generation: {}".format(generation))
+                current_population = []   
+                # Select each Genotype or Individual
+                for population in range(self.num_population):
+                    genotype = self.population[population]
+                    # Evaluate
+                    fitness = self.evaluate_genotype(genotype,generation)
+                    #print(fitness)
+                    # Save its fitness value
+                    current_population.append((genotype,float(fitness)))
+                    #print(current_population)
+                    writer.writerow([generation, fitness])                    
+                # After checking the fitness value of all indivuals
+                # Save genotype of the best individual
+                best = ga.getBestGenotype(current_population);
+                average = ga.getAverageGenotype(current_population);
+                np.save("Best.npy",best[0])
+                self.plot_fitness(generation, best[1], average);
+                
+                # Generate the new population using genetic operators
+                if (generation < self.num_generations - 1):
+                    self.population = ga.population_reproduce(current_population,self.num_elite);
+                
+            #print("All Genotypes: {}".format(self.genotypes))
+            print("GA optimization terminated.\n")   
     
     def draw_scaled_line(self, generation, y1, y2): 
+        return
         # the scale of the fitness plot
         XSCALE = int(self.width/self.num_generations)*50;
         YSCALE = 10000;
         self.display.drawLine((generation-1)*XSCALE, self.height-int(y1*YSCALE), generation*XSCALE, self.height-int(y2*YSCALE));
     
     def plot_fitness(self, generation, best_fitness, average_fitness):
+        return
         if (generation > 0):
             self.display.setColor(0xff0000);  # red
             self.draw_scaled_line(generation, self.prev_best_fitness, best_fitness);
@@ -265,7 +258,6 @@ class SupervisorGA:
     
         self.prev_best_fitness = best_fitness;
         self.prev_average_fitness = average_fitness;
-  
     
 if __name__ == "__main__":
     # Call Supervisor function to initiate the supervisor module   
