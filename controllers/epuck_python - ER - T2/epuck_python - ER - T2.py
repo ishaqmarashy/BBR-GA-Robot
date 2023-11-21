@@ -145,7 +145,7 @@ class Controller:
         forwardFitness*= 1.0
         ### DEFINE the fitness function equation to line leaving behaviour
         lineFitness = self.inputs[12]
-        lineFitness*= 1.0
+        lineFitness*= 2.0
         ### DEFINE the fitness function equation to avoid collision
         avoidCollisionFitness = 1-np.max(self.inputs[3:11])
         avoidCollisionFitness*= 1
@@ -153,15 +153,15 @@ class Controller:
         spinningFitness = 1-self.bin(0,self.max_speed,abs(self.velocity_left - self.velocity_right))
         spinningFitness*= 1.0
         if self.inputs[11]==1.0:
-            turnFitness = 1.0 if self.velocity_right <= self.velocity_left else 0.4
+            turnFitness = 1.0 if self.velocity_right <= self.velocity_left else 0
         else:
-            turnFitness = 1.0 if self.velocity_left <= self.velocity_right else 0.4
+            turnFitness = 1.0 if self.velocity_left <= self.velocity_right else 0
 
         ### DEFINE the fitness function equation of this iteration which should be a combination of the previous functions         
-        combinedFitness = lineFitness*(spinningFitness+forwardFitness+turnFitness+avoidCollisionFitness)
+        combinedFitness = (turnFitness+lineFitness+forwardFitness+spinningFitness+avoidCollisionFitness)/6
         self.fitness_values.append(combinedFitness)
         fitm=np.mean(self.fitness_values) 
-        # print(np.round([spinningFitness,forwardFitness, lineFitness,turnFitness,fitm],2))
+        # print(np.round([turnFitness,lineFitness, forwardFitness,spinningFitness,avoidCollisionFitness],2))
         # print(np.round(self.inputs[11:],2))
         # print(np.round(self.inputs,2))
         # print(round(combinedFitness,3))
@@ -209,11 +209,11 @@ class Controller:
             self.handle_emitter()
             self.handle_receiver()
             
-            self.inputs+=self.bin(350,500,[self.left_ir.getValue(),self.center_ir.getValue(),self.right_ir.getValue()])
-            self.inputs+=self.bin(100,200,[x.getValue() for x in self.proximity_sensors])
+            self.inputs+=self.bin(350,700,[self.left_ir.getValue(),self.center_ir.getValue(),self.right_ir.getValue()])
+            self.inputs+=self.bin(100,1000,[x.getValue() for x in self.proximity_sensors])
 
             # while above 0.3 input will be 1 and when its below input will be 0
-            ls=self.bin(300,500,min([x.getValue()  for x in self.light_sensors]))
+            ls=self.bin(300,3000,min([x.getValue()  for x in self.light_sensors]))
             if ls==0:
                 self.ls_prev=ls
             else:
@@ -229,7 +229,7 @@ class Controller:
             self.inputs+=[1.0 if self.ls_prev > 0.155 else 0]
             self.inputs+=[1.0 if self.line_prev > 0.04 else 0]
             self.inputs=np.round(self.inputs,3)
-
+            # print(self.inputs)
             self.check_for_new_genes()
             self.calculate_fitness()
             self.sense_compute_and_actuate()
