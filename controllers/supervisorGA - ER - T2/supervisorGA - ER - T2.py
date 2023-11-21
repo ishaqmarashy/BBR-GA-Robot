@@ -12,10 +12,10 @@ class SupervisorGA:
     # --------------------------------------------------------------------------------------------
         self.num_generations = 1000
         self.num_population = 20
-        self.num_elite = 2
+        self.num_elite = self.num_population*0.2
         
         # Simulation Parameters
-        self.time_experiment = 80 # s
+        self.time_experiment = 100 # s
     # --------------------------------------------------------------------------------------------
 
         # Please, do not change these parameters
@@ -137,11 +137,11 @@ class SupervisorGA:
             FINAL_TRANS=np.array([0.10824,0.931462,0.00173902])
             robot_trans=np.array(self.trans_field.getSFVec3f())
             # https://www.desmos.com/calculator/1ey118njhl
-            
-            delta_trans = (30/(math.pow(np.linalg.norm(robot_trans - FINAL_TRANS),2)+1))+1
+            x=max(robot_trans[0],FINAL_TRANS[0])-min(robot_trans[0],FINAL_TRANS[0])
+            y=max(robot_trans[1],FINAL_TRANS[1])-min(robot_trans[1],FINAL_TRANS[1])
+            delta_trans = -math.sqrt(math.pow(x,2)+math.pow(y,2))*2
             reward=delta_trans
             print(f'G{delta_trans}')
-            # print(f'G{round(delta_trans,3)}|A{round(robot_trans_avoid,3)}')
             return reward
 
     def reset_env(self, genotype, left):
@@ -167,7 +167,7 @@ class SupervisorGA:
         self.reset_env(genotype,left)
         self.run_seconds(self.time_experiment)
         fitness = self.receivedFitness
-        fitness*=self.reward(left)
+        fitness+=self.reward(left)
         print("Fitness: {}".format(fitness))     
 
         # TRIAL: TURN LEFT
@@ -175,7 +175,7 @@ class SupervisorGA:
         self.reset_env(genotype,not left)
         self.run_seconds(self.time_experiment)
         fitness = self.receivedFitness
-        fitness*=self.reward(not left)
+        fitness+=self.reward(not left)
         fitnessPerTrial.append(fitness)
         print("Fitness: {}".format(fitness))
 
