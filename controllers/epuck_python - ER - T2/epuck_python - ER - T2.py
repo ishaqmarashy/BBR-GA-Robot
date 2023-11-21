@@ -158,7 +158,7 @@ class Controller:
             turnFitness = 1.0 if self.velocity_left <= self.velocity_right else 0.4
 
         ### DEFINE the fitness function equation of this iteration which should be a combination of the previous functions         
-        combinedFitness = lineFitness*(spinningFitness+forwardFitness+turnFitness+avoidCollisionFitness)
+        combinedFitness = spinningFitness+forwardFitness+lineFitness+turnFitness+avoidCollisionFitness
         self.fitness_values.append(combinedFitness)
         fitm=np.mean(self.fitness_values) 
         # print(np.round([spinningFitness,forwardFitness, lineFitness,turnFitness,fitm],2))
