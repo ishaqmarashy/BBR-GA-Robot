@@ -156,7 +156,6 @@ class Controller:
             turnFitness = 1.0 if self.velocity_right <= self.velocity_left else 0
         else:
             turnFitness = 1.0 if self.velocity_left <= self.velocity_right else 0
-
         ### DEFINE the fitness function equation of this iteration which should be a combination of the previous functions         
         combinedFitness = (turnFitness+lineFitness+forwardFitness+spinningFitness+avoidCollisionFitness)/6
         self.fitness_values.append(combinedFitness)
@@ -215,7 +214,7 @@ class Controller:
             # while above 0.3 input will be 1 and when its below input will be 0
             ls=self.bin(300,3000,min([x.getValue()  for x in self.light_sensors]))
             if ls==0:
-                self.ls_prev=ls
+                self.ls_prev=1
             else:
                 # 0.155 at 60s
                 self.ls_prev=self.ls_prev*0.999
