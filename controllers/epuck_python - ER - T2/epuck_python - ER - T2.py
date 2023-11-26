@@ -1,5 +1,5 @@
 from controller import Robot, Receiver, Emitter
-import sys,struct,math
+import sys,struct,math,csv
 import numpy as np
 import mlp as ntw
 np.random.seed(0)  
@@ -49,7 +49,7 @@ class Controller:
         self.velocity_right = 0.0
         self.ls_prev=0
         self.line_prev=0
-        # Enable Proximity Sensors
+
         self.proximity_sensors = []
         for i in range(8):
             sensor_name = 'ps' + str(i)
@@ -143,29 +143,24 @@ class Controller:
         ### to encourage the robot to move forward
         forwardFitness =self.bin(0,self.max_speed,(self.velocity_left+self.velocity_right))
         forwardFitness*= 1.0
-        ### DEFINE the fitness function equation to line leaving behaviour
-        lineFitness = self.inputs[12]
-        lineFitness*= 2.0
-        ### DEFINE the fitness function equation to avoid collision
-        avoidCollisionFitness = 1-np.max(self.inputs[3:11])
-        avoidCollisionFitness*= 1
-        ### DEFINE the fitness function equation to avoid spining behaviour
-        spinningFitness = 1-self.bin(0,self.max_speed,abs(self.velocity_left - self.velocity_right))
+        # to encourage following the line... self.inputs[12] is the decaying line variable
+        lineFitness =1.0 if self.inputs[12] > 0.3 else 0
+        lineFitness*= 1.0
+        # to discourge random spinning behavior...
+        spinningFitness = 1-math.sqrt(self.bin(0,self.max_speed,abs(self.velocity_left - self.velocity_right)))
         spinningFitness*= 1.0
+        # to prefer right/left path... uses decaying light variable 
+        # to encourge left /right turning
         if self.inputs[11]==1.0:
-            turnFitness = 1.0 if self.velocity_right <= self.velocity_left else 0
+            turnFitness = 1.0 if self.velocity_right >= self.velocity_left else 0
         else:
-            turnFitness = 1.0 if self.velocity_left <= self.velocity_right else 0
-
-        ### DEFINE the fitness function equation of this iteration which should be a combination of the previous functions         
-        combinedFitness = (turnFitness+lineFitness+forwardFitness+spinningFitness+avoidCollisionFitness)/6
+            turnFitness = 1.0 if self.velocity_right <= self.velocity_left else 0
+        turnFitness*=0.3
+        turnFitness+=0.7
+        # combine fitnesses
+        combinedFitness = lineFitness*turnFitness*forwardFitness*spinningFitness
         self.fitness_values.append(combinedFitness)
         fitm=np.mean(self.fitness_values) 
-        # print(np.round([turnFitness,lineFitness, forwardFitness,spinningFitness,avoidCollisionFitness],2))
-        # print(np.round(self.inputs[11:],2))
-        # print(np.round(self.inputs,2))
-        # print(round(combinedFitness,3))
-        # print(self.inputs[11])
         self.fitness = fitm
 
     def handle_emitter(self):
@@ -195,7 +190,6 @@ class Controller:
             if(np.array_equal(self.receivedDataPrevious,self.receivedData) == False):
                 self.flagMessage = True
                 self.ls_prev=0
-                self.fitness = 0.0
             else:
                 self.flagMessage = False
             self.receivedDataPrevious = self.receivedData 
@@ -203,36 +197,41 @@ class Controller:
             self.flagMessage = False
 
     def run_robot(self):        
-        self.inputs =[]
-        while self.robot.step(self.time_step) != -1:
+        # columns=['gs0', 'gs1', 'gs2', 'ps0', 'ps1', 'ps2', 'ps3', 'ps4', 'ps5', 'ps6', 'ps7','lsdecay','linedecay']
+        # with open("sensors.csv", mode='w', newline='') as csv_file:
+            # writer = csv.writer(csv_file, delimiter=',')
+            # writer.writerow(columns)
             self.inputs =[]
-            self.handle_emitter()
-            self.handle_receiver()
-            
-            self.inputs+=self.bin(350,700,[self.left_ir.getValue(),self.center_ir.getValue(),self.right_ir.getValue()])
-            self.inputs+=self.bin(100,1000,[x.getValue() for x in self.proximity_sensors])
+            while self.robot.step(self.time_step) != -1:
+                self.inputs =[]
+                self.handle_emitter()
+                self.handle_receiver()
+                
+                self.inputs+=self.bin(350,750,[self.left_ir.getValue(),self.center_ir.getValue(),self.right_ir.getValue()])
+                self.inputs+=self.bin(0,2000,[x.getValue() for x in self.proximity_sensors])
 
-            # while above 0.3 input will be 1 and when its below input will be 0
-            ls=self.bin(300,3000,min([x.getValue()  for x in self.light_sensors]))
-            if ls==0:
-                self.ls_prev=ls
-            else:
-                # 0.155 at 60s
-                self.ls_prev=self.ls_prev*0.999
+                ls=self.bin(200,2000,min([x.getValue()  for x in self.light_sensors]))
+                if ls==0:
+                    # 0.155 at 60s
+                    self.ls_prev=1
+                else:
+                    self.ls_prev*=0.999
 
-            if 1-np.min(self.inputs[0:3])==1.0:
-                self.line_prev=1
-            else:
-                # 0.04 at 10s
-                self.line_prev*=0.99
-
-            self.inputs+=[1.0 if self.ls_prev > 0.155 else 0]
-            self.inputs+=[1.0 if self.line_prev > 0.04 else 0]
-            self.inputs=np.round(self.inputs,3)
-            # print(self.inputs)
-            self.check_for_new_genes()
-            self.calculate_fitness()
-            self.sense_compute_and_actuate()
+                if 1-np.min(self.inputs[0:3])==1.0:
+                    self.line_prev=1
+                else:
+                    # 0.45 at 5
+                    # 0.045 at 10s
+                    self.line_prev*=0.99
+                    
+                self.inputs+=[1.0 if self.ls_prev > 0.155 else 0]
+                self.inputs+=[self.line_prev]
+                # writer.writerow(self.inputs[:len(columns)])
+                # print(self.line_prev)
+                self.inputs=np.round(self.inputs,3)
+                self.check_for_new_genes()
+                self.calculate_fitness()
+                self.sense_compute_and_actuate()
             
 if __name__ == "__main__":
     # Call Robot function to initialize the robot

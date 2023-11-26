@@ -12,12 +12,11 @@ class SupervisorGA:
     # --------------------------------------------------------------------------------------------
         self.num_generations = 1000
         self.num_population = 20
-        self.num_elite = self.num_population*0.2
+        self.num_elite = self.num_population*0.4
         
         # Simulation Parameters
-        self.time_experiment = 100 # s
+        self.time_experiment = 70 # s
     # --------------------------------------------------------------------------------------------
-
         # Please, do not change these parameters
         self.time_step = 32 # mss
         # Initiate Supervisor Module
@@ -132,16 +131,13 @@ class SupervisorGA:
                 break    
             iterations = iterations + 1
 
-    # reward given to fitness if robot gets closer to pos
-    def reward(self,left):
+    def reward(self):
             FINAL_TRANS=np.array([0.10824,0.931462,0.00173902])
             robot_trans=np.array(self.trans_field.getSFVec3f())
-            # https://www.desmos.com/calculator/1ey118njhl
-            x=max(robot_trans[0],FINAL_TRANS[0])-min(robot_trans[0],FINAL_TRANS[0])
-            y=max(robot_trans[1],FINAL_TRANS[1])-min(robot_trans[1],FINAL_TRANS[1])
-            delta_trans = -math.sqrt(math.pow(x,2)+math.pow(y,2))*2
-            reward=delta_trans
-            print(f'G{delta_trans}')
+            x=robot_trans[0]-FINAL_TRANS[0]
+            y=FINAL_TRANS[1]-robot_trans[1]
+            delta_trans = math.sqrt(math.pow(x,2)+math.pow(y,2))
+            reward= delta_trans
             return reward
 
     def reset_env(self, genotype, left):
@@ -167,24 +163,31 @@ class SupervisorGA:
         self.reset_env(genotype,left)
         self.run_seconds(self.time_experiment)
         fitness = self.receivedFitness
-        fitness+=self.reward(left)
-        print("Fitness: {}".format(fitness))     
+        reward=self.reward()
+        print("FnR",fitness)
+        print(f'R{reward}')
+        fitness/=reward
+        fitnessPerTrial.append(fitness)
+        print("F:{}".format(fitness))     
 
         # TRIAL: TURN LEFT
         self.emitterData = str(genotype)
         self.reset_env(genotype,not left)
         self.run_seconds(self.time_experiment)
         fitness = self.receivedFitness
-        fitness+=self.reward(not left)
+        reward=self.reward()
+        print("FnR",fitness)
+        print(f'R{reward}')
+        fitness/=reward
         fitnessPerTrial.append(fitness)
-        print("Fitness: {}".format(fitness))
+        print("F: {}".format(fitness))
 
         fitness = np.mean(fitnessPerTrial)
         current = (generation,genotype,fitness)
         self.genotypes.append(current)  
         
         return fitness
-
+    
     def run_demo(self):
         left=True
         # Read File
