@@ -211,7 +211,7 @@ class Controller:
             self.handle_receiver()
             
             self.inputs+=self.bin(350,700,[self.left_ir.getValue(),self.center_ir.getValue(),self.right_ir.getValue()])
-            self.inputs+=self.bin(100,1000,[x.getValue() for x in self.proximity_sensors])
+            self.inputs+=self.bin(100,200,[x.getValue() for x in self.proximity_sensors])
 
             # while above 0.3 input will be 1 and when its below input will be 0
             ls=self.bin(300,3000,min([x.getValue()  for x in self.light_sensors]))
