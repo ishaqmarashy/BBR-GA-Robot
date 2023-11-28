@@ -9,8 +9,8 @@ np.random.seed(0)
 
 class SupervisorGA:
     def __init__(self):
-    # --------------------------------------------------------------------------------------------
-        self.num_generations = 1000
+    # ------------------------our modification of lab 4-------------------------------------------
+        self.num_generations = 320
         self.num_population = 20
         self.num_elite = 2
         
@@ -42,7 +42,8 @@ class SupervisorGA:
         self.receivedFitness = "" 
         self.emitterData = ""
         
-
+        #------------------------our modification of lab 4---------------------------------
+        # only used to keep them in place
         self.boxr_node = self.supervisor.getFromDef("BOXR")
         self.boxr_t = self.boxr_node.getField("translation")
         self.boxr_r = self.boxr_node.getField("rotation")
@@ -66,6 +67,8 @@ class SupervisorGA:
         self.obs_cyn2_r = self.obs_cyn2_node.getField("rotation")
         self.obs_cyn2_initial_translation = self.obs_cyn2_t.getSFVec3f()
         self.obs_cyn2_initial_rotation = self.obs_cyn2_r.getSFRotation()
+        # --------------------------------------------------------------------------------
+
         ###########
         ### DEFINE here the 3 GA Parameters:
    
@@ -78,20 +81,14 @@ class SupervisorGA:
         # All Genotypes
         self.genotypes = []
         
-        # Display: screen to plot the fitness values of the best individual and the average of the entire population
-        # self.display = self.supervisor.getDevice("display")
-        # self.width = self.display.getWidth()
-        # self.height = self.display.getHeight()
-        # self.prev_best_fitness = 0.0;
-        # self.prev_average_fitness = 0.0;
-        # self.display.drawText("Fitness (Best - Red)", 0,0)
-        # self.display.drawText("Fitness (Average - Green)", 0,10)
-        # Light
+        # ------------------------our modification of lab 4---------------------------------
+
         self.light_node = self.supervisor.getFromDef("Light")
         if self.light_node is None:
             sys.stderr.write("No DEF Light node found in the current world file\n")
             sys.exit(1)
         self.light_on_field = self.light_node.getField("on")      
+        # ----------------------------------------------------------------------------------
 
     def createRandomPopulation(self):
         # Wait until the supervisor receives the size of the genotypes (number of weights)
@@ -132,16 +129,14 @@ class SupervisorGA:
                 break    
             iterations = iterations + 1
 
+ # ------------------------our modification of lab 4---------------------------------
     # reward given to fitness if robot gets closer to pos
     def reward(self,left):
             FINAL_TRANS=np.array([0.10824,0.931462,0.00173902])
             robot_trans=np.array(self.trans_field.getSFVec3f())
-            # https://www.desmos.com/calculator/1ey118njhl
-            
             delta_trans = (30/(math.pow(np.linalg.norm(robot_trans - FINAL_TRANS),2)+1))+1
             reward=delta_trans
             print(f'G{delta_trans}')
-            # print(f'G{round(delta_trans,3)}|A{round(robot_trans_avoid,3)}')
             return reward
 
     def reset_env(self, genotype, left):
@@ -203,7 +198,7 @@ class SupervisorGA:
         fitness = self.receivedFitness
         fitness+=self.reward(not left)
         print("Fitness with reward: {}".format(fitness))    
-    
+    # ---------------------------------------------------------------------
     def run_optimization(self):
         with open("fitness_data.csv", mode='w', newline='') as csv_file:
             writer = csv.writer(csv_file, delimiter=',')

@@ -9,6 +9,7 @@ class Controller:
         # Robot Parameters
         # Please, do not change these parameters
         self.robot = robot
+        # ------------------------our modification of lab 4---------------------------------
         self.time_step = 32 # ms
         self.max_speed = 4  # m/s
  
@@ -18,7 +19,7 @@ class Controller:
         self.number_input_layer = 13
         self.number_hidden_layer = [13,13,13,13] 
         self.number_output_layer = 2
-        
+        # -----------------------------------------------------------------------------------
         # Create a list with the number of neurons per layer
         self.number_neuros_per_layer = []
         self.number_neuros_per_layer.append(self.number_input_layer)
@@ -64,11 +65,14 @@ class Controller:
         self.right_ir = self.robot.getDevice('gs2')
         self.right_ir.enable(self.time_step)
 
+        # ------------------------our modification of lab 4---------------------------------
+
         self.light_sensors = []
         for i in range(8):
             sensor_name = 'ls' + str(i)
             self.light_sensors.append(self.robot.getDevice(sensor_name))
             self.light_sensors[i].enable(self.time_step)
+        # -----------------------------------------------------------------------------------
         
         # Enable Emitter and Receiver (to communicate with the Supervisor)
         self.emitter = self.robot.getDevice("emitter") 
@@ -127,6 +131,7 @@ class Controller:
         self.left_motor.setVelocity(self.velocity_left*self.max_speed)
         self.right_motor.setVelocity(self.velocity_right*self.max_speed)
 
+    # ------------------------our modification of lab 4---------------------------------
     def bin(self, min_val, max_val, val):
         if isinstance(val, list):
             return [self.bin(min_val, max_val, v) for v in val]
@@ -137,7 +142,7 @@ class Controller:
                 return 0.0
             else:
                 return (val-min_val)/(max_val-min_val)
-            
+    
     def calculate_fitness(self):
         ### DEFINE the fitness function to increase the speed of the robot and 
         ### to encourage the robot to move forward
@@ -161,12 +166,8 @@ class Controller:
         combinedFitness = spinningFitness+forwardFitness+lineFitness+turnFitness+avoidCollisionFitness
         self.fitness_values.append(combinedFitness)
         fitm=np.mean(self.fitness_values) 
-        # print(np.round([spinningFitness,forwardFitness, lineFitness,turnFitness,fitm],2))
-        # print(np.round(self.inputs[11:],2))
-        # print(np.round(self.inputs,2))
-        # print(round(combinedFitness,3))
-        # print(self.inputs[11])
         self.fitness = fitm
+        # -----------------------------------------------------------------------------------
 
     def handle_emitter(self):
         # Send the self.fitness value to the supervisor
@@ -202,6 +203,7 @@ class Controller:
         else:
             self.flagMessage = False
 
+    # ------------------------our modification of lab 4---------------------------------
     def run_robot(self):        
         self.inputs =[]
         while self.robot.step(self.time_step) != -1:
@@ -233,7 +235,8 @@ class Controller:
             self.check_for_new_genes()
             self.calculate_fitness()
             self.sense_compute_and_actuate()
-            
+    # -----------------------------------------------------------------------------------
+    
 if __name__ == "__main__":
     # Call Robot function to initialize the robot
     my_robot = Robot()
