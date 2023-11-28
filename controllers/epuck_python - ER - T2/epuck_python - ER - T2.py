@@ -160,11 +160,6 @@ class Controller:
         combinedFitness = (turnFitness+lineFitness+forwardFitness+spinningFitness+avoidCollisionFitness)/6
         self.fitness_values.append(combinedFitness)
         fitm=np.mean(self.fitness_values) 
-        # print(np.round([turnFitness,lineFitness, forwardFitness,spinningFitness,avoidCollisionFitness],2))
-        # print(np.round(self.inputs[11:],2))
-        # print(np.round(self.inputs,2))
-        # print(round(combinedFitness,3))
-        # print(self.inputs[11])
         self.fitness = fitm
 
     def handle_emitter(self):

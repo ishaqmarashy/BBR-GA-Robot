@@ -136,7 +136,6 @@ class SupervisorGA:
     def reward(self,left):
             FINAL_TRANS=np.array([0.10824,0.931462,0.00173902])
             robot_trans=np.array(self.trans_field.getSFVec3f())
-            # https://www.desmos.com/calculator/1ey118njhl
             x=max(robot_trans[0],FINAL_TRANS[0])-min(robot_trans[0],FINAL_TRANS[0])
             y=max(robot_trans[1],FINAL_TRANS[1])-min(robot_trans[1],FINAL_TRANS[1])
             delta_trans = -math.sqrt(math.pow(x,2)+math.pow(y,2))*2
@@ -168,6 +167,7 @@ class SupervisorGA:
         self.run_seconds(self.time_experiment)
         fitness = self.receivedFitness
         fitness+=self.reward(left)
+        fitnessPerTrial.append(fitness)
         print("Fitness: {}".format(fitness))     
 
         # TRIAL: TURN LEFT
@@ -231,7 +231,6 @@ class SupervisorGA:
                 best = ga.getBestGenotype(current_population);
                 average = ga.getAverageGenotype(current_population);
                 np.save("Best.npy",best[0])
-                self.plot_fitness(generation, best[1], average);
                 
                 # Generate the new population using genetic operators
                 if (generation < self.num_generations - 1):
@@ -239,25 +238,6 @@ class SupervisorGA:
                 
             #print("All Genotypes: {}".format(self.genotypes))
             print("GA optimization terminated.\n")   
-    
-    def draw_scaled_line(self, generation, y1, y2): 
-        return
-        # the scale of the fitness plot
-        XSCALE = int(self.width/self.num_generations)*50;
-        YSCALE = 10000;
-        self.display.drawLine((generation-1)*XSCALE, self.height-int(y1*YSCALE), generation*XSCALE, self.height-int(y2*YSCALE));
-    
-    def plot_fitness(self, generation, best_fitness, average_fitness):
-        return
-        if (generation > 0):
-            self.display.setColor(0xff0000);  # red
-            self.draw_scaled_line(generation, self.prev_best_fitness, best_fitness);
-    
-            self.display.setColor(0x00ff00);  # green
-            self.draw_scaled_line(generation, self.prev_average_fitness, average_fitness);
-    
-        self.prev_best_fitness = best_fitness;
-        self.prev_average_fitness = average_fitness;
     
 if __name__ == "__main__":
     # Call Supervisor function to initiate the supervisor module   
