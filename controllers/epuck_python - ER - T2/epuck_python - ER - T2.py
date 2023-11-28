@@ -12,7 +12,7 @@ class Controller:
         self.time_step = 32 # ms
         #-------------------------code between is our modification---------------------------
 
-        self.max_speed = 6.28  # m/s
+        self.max_speed = 4  # m/s
  
         # MLP Parameters and Variables 
         ###########
@@ -216,7 +216,7 @@ class Controller:
             # while above 0.3 input will be 1 and when its below input will be 0
             ls=self.bin(300,3000,min([x.getValue()  for x in self.light_sensors]))
             if ls==0:
-                self.ls_prev=self.ls_prev
+                self.ls_prev=ls
             else:
                 # 0.155 at 60s
                 self.ls_prev=self.ls_prev*0.999
