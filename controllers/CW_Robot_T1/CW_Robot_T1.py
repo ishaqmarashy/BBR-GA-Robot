@@ -46,7 +46,7 @@ class Controller:
         self.right_ir = self.robot.getDevice('gs2')
         self.right_ir.enable(self.time_step)
         
-        # Enable Light Sensors
+    #-------------------------code between is our modification---------------------------
         self.light_sensors = []
         for i in range(8):
             sensor_name = 'ls' + str(i)
@@ -140,6 +140,8 @@ class Controller:
                 self.lr(0.2,0.7)
             else:
                 self.lr(0.5,0.1)
+    #-----------------------------------------------------------------------
+    
 
     def handle_receiver(self):
         if self.receiver.getQueueLength() > 0:
@@ -164,7 +166,7 @@ class Controller:
         else:
             self.flagMessage = False
 
-
+        #-------------------------code between is our modification---------------------------
     def sense_compute_and_actuate(self):
         # run modules
         self.lr(0,0)
@@ -199,4 +201,5 @@ if __name__ == "__main__":
     while True:
         controller.run_robot()
         controller.handle_receiver()
+    #--------------------------------------------------------------------------------
     

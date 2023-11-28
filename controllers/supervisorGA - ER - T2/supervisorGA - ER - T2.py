@@ -9,14 +9,14 @@ np.random.seed(0)
 
 class SupervisorGA:
     def __init__(self):
-    # --------------------------------------------------------------------------------------------
+    #-------------------------code between is our modification---------------------------
         self.num_generations = 1000
         self.num_population = 20
         self.num_elite = self.num_population*0.2
         
         # Simulation Parameters
         self.time_experiment = 100 # s
-    # --------------------------------------------------------------------------------------------
+    # -----------------------------------------------------------------------------------
 
         # Please, do not change these parameters
         self.time_step = 32 # mss
@@ -42,7 +42,7 @@ class SupervisorGA:
         self.receivedFitness = "" 
         self.emitterData = ""
         
-
+    #-------------------------code between is our modification---------------------------
         self.boxr_node = self.supervisor.getFromDef("BOXR")
         self.boxr_t = self.boxr_node.getField("translation")
         self.boxr_r = self.boxr_node.getField("rotation")
@@ -66,6 +66,8 @@ class SupervisorGA:
         self.obs_cyn2_r = self.obs_cyn2_node.getField("rotation")
         self.obs_cyn2_initial_translation = self.obs_cyn2_t.getSFVec3f()
         self.obs_cyn2_initial_rotation = self.obs_cyn2_r.getSFRotation()
+    # -----------------------------------------------------------------------------------
+    
         ###########
         ### DEFINE here the 3 GA Parameters:
    
@@ -78,20 +80,14 @@ class SupervisorGA:
         # All Genotypes
         self.genotypes = []
         
-        # Display: screen to plot the fitness values of the best individual and the average of the entire population
-        # self.display = self.supervisor.getDevice("display")
-        # self.width = self.display.getWidth()
-        # self.height = self.display.getHeight()
-        # self.prev_best_fitness = 0.0;
-        # self.prev_average_fitness = 0.0;
-        # self.display.drawText("Fitness (Best - Red)", 0,0)
-        # self.display.drawText("Fitness (Average - Green)", 0,10)
-        # Light
+    #-------------------------code between is our modification---------------------------
         self.light_node = self.supervisor.getFromDef("Light")
         if self.light_node is None:
             sys.stderr.write("No DEF Light node found in the current world file\n")
             sys.exit(1)
         self.light_on_field = self.light_node.getField("on")      
+    # -----------------------------------------------------------------------------------
+    
 
     def createRandomPopulation(self):
         # Wait until the supervisor receives the size of the genotypes (number of weights)
@@ -132,6 +128,7 @@ class SupervisorGA:
                 break    
             iterations = iterations + 1
 
+    #-------------------------code between is our modification---------------------------
     # reward given to fitness if robot gets closer to pos
     def reward(self,left):
             FINAL_TRANS=np.array([0.10824,0.931462,0.00173902])
@@ -203,11 +200,15 @@ class SupervisorGA:
         fitness = self.receivedFitness
         fitness+=self.reward(not left)
         print("Fitness with reward: {}".format(fitness))    
+    # -----------------------------------------------------------------------------------
     
     def run_optimization(self):
+        #-------------------------code between is our modification---------------------------
+
         with open("fitness_data.csv", mode='w', newline='') as csv_file:
             writer = csv.writer(csv_file, delimiter=',')
             # Wait until the number of weights is updated
+        # -----------------------------------------------------------------------------------
             while(self.num_weights == 0):
                 self.handle_receiver()
                 self.createRandomPopulation()

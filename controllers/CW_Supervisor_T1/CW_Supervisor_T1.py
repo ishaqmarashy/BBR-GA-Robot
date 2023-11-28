@@ -5,11 +5,8 @@ from controller import Display
 import numpy as np
 import os,sys,struct
 
-
-        
 class SupervisorGA:
     def __init__(self):
-    # --------------------------------------------------------------------------------------------
         # Simulation Parameters
         self.time_experiment = 90 # s
 
@@ -37,6 +34,7 @@ class SupervisorGA:
         self.receivedFitness = "" 
         self.emitterData = ""
         
+        #-------------------------code between is our modification---------------------------
 
         self.boxr_node = self.supervisor.getFromDef("BOXR")
         self.boxr_t = self.boxr_node.getField("translation")
@@ -67,6 +65,7 @@ class SupervisorGA:
             sys.stderr.write("No DEF Light node found in the current world file\n")
             sys.exit(1)
         self.light_on_field = self.light_node.getField("on")      
+        #--------------------------------------------------------------------------------------
 
     def handle_receiver(self):
         while(self.receiver.getQueueLength() > 0):
@@ -101,6 +100,7 @@ class SupervisorGA:
                 break    
             iterations = iterations + 1
 
+    #-------------------------code between is our modification---------------------------
     def reset_env(self, left):
         self.boxr_r.setSFRotation(self.boxr_initial_rotation)
         self.obs_cyn1_t.setSFVec3f(self.obs_cyn1_initial_translation)
@@ -131,11 +131,9 @@ if __name__ == "__main__":
     # Call Supervisor function to initiate the supervisor module   
     gaModel = SupervisorGA()
     
-    # Function used to run the best individual or the GA
-    keyboard = Keyboard()
-    keyboard.enable(50)
-    
     # Interface
     while gaModel.supervisor.step(gaModel.time_step) != -1:
         gaModel.run_demo()
+    #--------------------------------------------------------------------------------------
+
         

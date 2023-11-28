@@ -10,6 +10,8 @@ class Controller:
         # Please, do not change these parameters
         self.robot = robot
         self.time_step = 32 # ms
+        #-------------------------code between is our modification---------------------------
+
         self.max_speed = 6.28  # m/s
  
         # MLP Parameters and Variables 
@@ -18,6 +20,7 @@ class Controller:
         self.number_input_layer = 13
         self.number_hidden_layer = [13,13,13,13] 
         self.number_output_layer = 2
+        #------------------------------------------------------------------------------------
         
         # Create a list with the number of neurons per layer
         self.number_neuros_per_layer = []
@@ -63,12 +66,14 @@ class Controller:
         self.center_ir.enable(self.time_step)
         self.right_ir = self.robot.getDevice('gs2')
         self.right_ir.enable(self.time_step)
+        #-------------------------code between is our modification---------------------------
 
         self.light_sensors = []
         for i in range(8):
             sensor_name = 'ls' + str(i)
             self.light_sensors.append(self.robot.getDevice(sensor_name))
             self.light_sensors[i].enable(self.time_step)
+        #------------------------------------------------------------------------------------
         
         # Enable Emitter and Receiver (to communicate with the Supervisor)
         self.emitter = self.robot.getDevice("emitter") 
@@ -123,7 +128,7 @@ class Controller:
         output = self.network.propagate_forward(self.inputs)
         self.velocity_left = output[0]
         self.velocity_right = output[1]
-        # Multiply the motor values by 3 to increase the velocities
+    #-------------------------code between is our modification---------------------------
         self.left_motor.setVelocity(self.velocity_left*self.max_speed)
         self.right_motor.setVelocity(self.velocity_right*self.max_speed)
 
@@ -161,6 +166,7 @@ class Controller:
         self.fitness_values.append(combinedFitness)
         fitm=np.mean(self.fitness_values) 
         self.fitness = fitm
+    #------------------------------------------------------------------------------------
 
     def handle_emitter(self):
         # Send the self.fitness value to the supervisor
@@ -196,6 +202,7 @@ class Controller:
         else:
             self.flagMessage = False
 
+    #-------------------------code between is our modification---------------------------
     def run_robot(self):        
         self.inputs =[]
         while self.robot.step(self.time_step) != -1:
@@ -227,6 +234,7 @@ class Controller:
             self.check_for_new_genes()
             self.calculate_fitness()
             self.sense_compute_and_actuate()
+    #------------------------------------------------------------------------------------
             
 if __name__ == "__main__":
     # Call Robot function to initialize the robot
