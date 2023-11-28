@@ -8,7 +8,6 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/obstacles/protos/OilBarrel.proto"
 
 WorldInfo {
-  FPS 20
 }
 Viewpoint {
   orientation -0.5714895698802404 0.5714896191010924 0.5888966690156994 2.077166964329482
@@ -21,7 +20,7 @@ RectangleArena {
   floorAppearance PBRAppearance {
     baseColorMap ImageTexture {
       url [
-        "../CW_2023/floor_line_path.jpeg"
+        "floor_line_path.jpeg"
       ]
       repeatS FALSE
       repeatT FALSE
@@ -50,33 +49,18 @@ WoodenBox {
 TexturedBackground {
   texture "empty_office"
 }
-DEF Controller E-puck {
+E-puck {
+  hidden position_0_0 3.2113116658008924
+  hidden position_0_1 3.2058879223872747
+  hidden rotation_1 0 1 0 3.2113116658008924
+  hidden rotation_2 0 1 0 3.2058879223872747
   translation -0.685987 -0.66 -6.3949e-05
   rotation 0.0005852163828441811 -0.0005506349294570428 0.9999996771614277 1.631941101052429
-  controller "CW_Robot_T1"
-  emitter_channel 20
-  receiver_channel 19
+  controller "<none>"
   groundSensorsSlot [
     E-puckGroundSensors {
     }
   ]
-}
-DEF GA Robot {
-  children [
-    Receiver {
-      channel 20
-    }
-    Emitter {
-      channel 19
-    }
-    Display {
-      width 500
-      height 150
-    }
-  ]
-  name "Supervisor"
-  controller "supervisor_T1"
-  supervisor TRUE
 }
 DEF OBS_Cyn2 Solid {
   translation -0.23 0.3 0.05
@@ -173,14 +157,13 @@ DEF OBS_Cyn1 Solid {
     radius 0.05
   }
 }
-DEF Light SpotLight {
+SpotLight {
   attenuation 0 0 2
   beamWidth 0.1
   cutOffAngle 0.16
   direction 1.6 0.1 -0.5
   intensity 7
   location -1.3 -0.5 0.2
-  on FALSE
 }
 OilBarrel {
   translation -0.94 -0.48 0.03
